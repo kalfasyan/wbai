@@ -1,0 +1,5 @@
+{
+    "git.ignoreLimitWarning": true,
+    "python.pythonPath": "/home/kalfasyan/anaconda3/envs/wbai/bin/python",
+    "jupyter.jupyterServerType": "local"
+}
