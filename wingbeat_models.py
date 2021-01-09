@@ -4,6 +4,7 @@ import torch.nn.functional as F
 import numpy as np
 
 class Conv1dNetRAW(nn.Module):
+
     def __init__(self):
         super(Conv1dNetRAW, self).__init__()
         self.conv1 = nn.Conv1d(1, 16, 3)
@@ -177,6 +178,7 @@ class EarlyStopping:
         self.delta = delta
         self.path = path
         self.trace_func = trace_func
+
     def __call__(self, val_loss, model):
 
         score = -val_loss
@@ -186,7 +188,7 @@ class EarlyStopping:
             self.save_checkpoint(val_loss, model)
         elif score < self.best_score + self.delta:
             self.counter += 1
-            if self.verbose:
+            if self.verbose > 1:
                 self.trace_func(f'EarlyStopping counter: {self.counter} out of {self.patience}')
             if self.counter >= self.patience:
                 self.early_stop = True
@@ -197,7 +199,7 @@ class EarlyStopping:
 
     def save_checkpoint(self, val_loss, model):
         '''Saves model when validation loss decrease.'''
-        if self.verbose:
+        if self.verbose > 0:
             self.trace_func(f'Validation loss decreased ({self.val_loss_min:.6f} --> {val_loss:.6f}).  Saving model ...')
         torch.save(model.state_dict(), self.path)
         self.val_loss_min = val_loss

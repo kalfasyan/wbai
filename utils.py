@@ -6,11 +6,16 @@ from fastai.data.transforms import get_files
 import torch.nn.functional as F
 import pandas as pd
 import numpy as np
+from configparser import ConfigParser
 
-BASE_PATH = Path("/home/kalfasyan/data/wingbeats/")
+cfg = ConfigParser()
+cfg.read('config.ini')
+
+BASE_DATAPATH = Path(cfg.get('base','data_dir'))
+BASE_PROJECTPATH = Path(cfg.get('base','project_dir'))
 
 def get_wingbeat_files(dsname):
-    datadir = Path(BASE_PATH/dsname)
+    datadir = Path(BASE_DATAPATH/dsname)
     return get_files(datadir, extensions='.wav', recurse=True, folders=None, followlinks=True)
 
 def open_wingbeat(fname, plot=False, verbose=False):
@@ -29,11 +34,11 @@ def open_wingbeat(fname, plot=False, verbose=False):
 
 def label_func(fname):
     # TODO: Use regular expressions instead
-    return str(fname).split('/')[len(BASE_PATH.parts)+1]
+    return str(fname).split('/')[len(BASE_DATAPATH.parts)+1]
 
 def make_dataset_df(dsname, verbose=False):
 
-    datadir = Path(BASE_PATH/dsname)
+    datadir = Path(BASE_DATAPATH/dsname)
 
     files = get_wingbeat_files(dsname)
     labels = pd.Series(files).apply(lambda x: label_func(x)).tolist() #list(files.map(label_func))
