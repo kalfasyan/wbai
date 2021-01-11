@@ -203,3 +203,17 @@ class EarlyStopping:
             self.trace_func(f'Validation loss decreased ({self.val_loss_min:.6f} --> {val_loss:.6f}).  Saving model ...')
         torch.save(model.state_dict(), self.path)
         self.val_loss_min = val_loss
+
+class ModelEnsemble(nn.Module):
+    def __init__(self, modelA, modelB):
+        super(ModelEnsemble, self).__init__()
+        self.modelA = modelA
+        self.modelB = modelB
+        self.classifier = nn.Linear(4, 2)
+        
+    def forward(self, x1, x2):
+        x1 = self.modelA(x1)
+        x2 = self.modelB(x2)
+        x = torch.cat((x1, x2), dim=1)
+        x = self.classifier(F.relu(x))
+        return x

@@ -7,7 +7,7 @@ import torchaudio
 from torch.utils.data import Dataset
 from torch.utils.data.sampler import SubsetRandomSampler
 from torchvision import datasets, transforms
-from tsai.all import *
+# from tsai.all import *
 
 torchaudio.USE_SOUNDFILE_LEGACY_INTERFACE = False
 torchaudio.set_audio_backend('soundfile')

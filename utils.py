@@ -33,8 +33,14 @@ def open_wingbeat(fname, plot=False, verbose=False):
     return waveform
 
 def label_func(fname):
-    # TODO: Use regular expressions instead
-    return str(fname).split('/')[len(BASE_DATAPATH.parts)+1]
+    dsname = str(fname).split('/')[len(BASE_DATAPATH.parts)]
+    if (dsname.startswith(("Suzukii_RL", "Melanogaster_RL"))):
+        if dsname == 'Suzukii_RL':
+            return 'D. suzukii'
+        elif dsname == 'Melanogaster_RL':
+            return 'D. melanogaster'
+    else:
+        return str(fname).split('/')[len(BASE_DATAPATH.parts)+1]
 
 def make_dataset_df(dsname, verbose=False):
 
@@ -60,3 +66,4 @@ def butter_bandpass_filter(data, lowcut=120, highcut=1500, fs=8000, order=4):
     b, a = butter(order, [low, high], btype='bandpass')
     signal_filtered = lfilter(b, a, data)
     return signal_filtered
+
