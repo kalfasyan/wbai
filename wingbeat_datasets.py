@@ -12,7 +12,7 @@ from torch.utils.data import DataLoader, Dataset
 from torchvision import transforms
 from tqdm import tqdm
 import os
-from torchaudio.transforms import Spectrogram, AmplitudeToDB
+from torchaudio.transforms import Spectrogram, AmplitudeToDB, MelSpectrogram
 import pandas as pd
 
 from utils import (BASE_DATAPATH, butter_bandpass_filter, make_dataset_df,
@@ -140,6 +140,26 @@ class TransformWingbeat(object):
                 return {'x': (wbt,spec), 'y': label, 'path': sample['path'], 'idx': sample['idx']}
             else:
                 return {'x': spec, 'y': label, 'path': sample['path'], 'idx': sample['idx']}
+
+        elif self.setting == 'melstft':
+            spec = MelSpectrogram(n_fft=256, hop_length=42)(wbt)
+            spec = AmplitudeToDB()(spec)
+            spec = torch.from_numpy(np.repeat(spec.numpy()[...,np.newaxis],3,0))
+            spec = spec[:,:,:,0]
+        
+            if self.setting == 'stftraw':
+                return {'x': (wbt,spec), 'y': label, 'path': sample['path'], 'idx': sample['idx']}
+            else:
+                return {'x': spec, 'y': label, 'path': sample['path'], 'idx': sample['idx']}
+
+        elif self.setting == 'reassigned_stft':
+            freqs, times, mags = librosa.reassigned_spectrogram(y=wbt.numpy().squeeze(), sr=8000, 
+                                                                n_fft=256, hop_length=42, center=False)
+            mags_db = librosa.power_to_db(mags)
+            mags_db = np.expand_dims(librosa.power_to_db(mags),axis=0)
+            mags_db = torch.from_numpy(np.repeat(mags_db[...,np.newaxis],3,0))
+            mags_db = mags_db[:,:,:,0]
+            return {'x': mags_db, 'y': label, 'path': sample['path'], 'idx': sample['idx']}
 
         elif self.setting.startswith('psd'):
             _, psd = sg.welch(wbt.numpy().squeeze(), fs=8000, scaling='density', window='hanning', nfft=8192, nperseg=256, noverlap=128+64)
