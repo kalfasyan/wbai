@@ -4,6 +4,7 @@ import numpy as np
 import psutil
 from scipy.signal.spectral import spectrogram
 import torch
+torch.manual_seed(42)
 from torch._C import Value
 import torch.nn.functional as F
 from scipy import signal as sg
@@ -70,7 +71,7 @@ class WingbeatsDataset(Dataset):
     def clean(self,threshold=25, batch_size=32, num_workers=num_workers):
         """
         Given a WingbeatsDataset, it will return a clean Subset after applying 
-        a threshold on the sum of l2-normalized PSDs (which has shown to separate valid from invalid wingbeats).
+        a threshold on the sum of l2-normalized PSDs (which I've shown to separate valid from invalid wingbeats).
 
         See 'clean_wingbeatsdataset_inds' definition below.
         """
@@ -132,6 +133,7 @@ class TransformWingbeat(object):
         
         if self.setting.startswith('stft'):
             spec = Spectrogram(n_fft=256, hop_length=42)(wbt)
+            if self.setting == 'stftcrop': spec = spec[:,5:70,:]
             spec = AmplitudeToDB()(spec)
             spec = torch.from_numpy(np.repeat(spec.numpy()[...,np.newaxis],3,0))
             spec = spec[:,:,:,0]
@@ -142,6 +144,7 @@ class TransformWingbeat(object):
                 return {'x': spec, 'y': label, 'path': sample['path'], 'idx': sample['idx']}
 
         elif self.setting == 'melstft':
+            # TODO: Something wrong in the output spec. Missing frequencies.
             spec = MelSpectrogram(n_fft=256, hop_length=42)(wbt)
             spec = AmplitudeToDB()(spec)
             spec = torch.from_numpy(np.repeat(spec.numpy()[...,np.newaxis],3,0))
@@ -187,7 +190,7 @@ def clean_wingbeatsdataset_inds(name="Melanogaster_RL/Y", threshold=25, batch_si
     all_inds_valid = torch.tensor([])
     all_paths_valid = []
 
-    for i, (x_batch,y_batch,path_batch,idx) in enumerate(tqdm(dloader, desc="Cleaning dataset..\t")):
+    for i, (x_batch,y_batch,path_batch,idx) in enumerate(tqdm(dloader, desc=f"Cleaning dataset {name}..\t")):
         # Using the sums of l2-normalized PSDs
         xb_sums = x_batch.squeeze().sum(axis=1)
         # We set a threshold to get valid wingbeats, all invalid set to zero

@@ -1,5 +1,6 @@
 import torchaudio
 import torch
+torch.manual_seed(42)
 from pathlib import Path
 import matplotlib.pyplot as plt
 from fastai.data.transforms import get_files
@@ -67,3 +68,49 @@ def butter_bandpass_filter(data, lowcut=120, highcut=1500, fs=8000, order=4):
     signal_filtered = lfilter(b, a, data)
     return signal_filtered
 
+def calc_mean_std_1D(loader=None):
+    from tqdm import tqdm
+
+
+    channels_sum, channels_sqrd_sum, num_batches = 0,0,0
+
+    for data in tqdm(loader, desc='Calculating mean and std..\t'):
+        data = data[0]
+        channels_sum += torch.mean(data,dim=[0,2]) 
+        channels_sqrd_sum += torch.mean(data**2, dim=[0,2])
+        num_batches += 1 
+
+    mean = (channels_sum/num_batches)
+    std = (channels_sqrd_sum/num_batches - mean**2)**0.5
+    print(f"Mean: {mean}")
+    print(f"Std: {std}")
+    return mean, std
+
+
+@torch.no_grad()
+def get_all_preds(model, loader):
+    all_preds = torch.tensor([])
+    for x_batch,y_batch,path_batch,idx_batch in loader:
+
+        y_batch = torch.as_tensor(y_batch).type(torch.LongTensor)
+        x_batch,y_batch = x_batch.cuda(), y_batch.cuda()
+
+
+        preds = model(x_batch.float())
+        all_preds = torch.cat(
+            (all_preds, preds)
+            ,dim=0
+        )
+    return all_preds
+
+def np_hist(df, col, res=0.1, rot=45, fs=12):
+    import matplotlib.pyplot as plt
+    import numpy as np
+    np.random.seed(42)
+    values = df[col]
+    _bins, _edges = np.histogram(values, np.arange(df[col].min(), df[col].max(), res))
+    plt.plot(_edges[:len(_edges)-1], _bins)
+    plt.ylabel('counts'); plt.xlabel(col)
+    plt.xticks(rotation=rot, fontsize=fs);
+    plt.yticks(fontsize=fs);
+    plt.show()
