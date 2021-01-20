@@ -8,6 +8,8 @@ import torch.nn.functional as F
 import pandas as pd
 import numpy as np
 from configparser import ConfigParser
+import sys
+sys.setrecursionlimit(10000)
 
 cfg = ConfigParser()
 cfg.read('config.ini')
@@ -43,21 +45,7 @@ def label_func(fname):
     else:
         return str(fname).split('/')[len(BASE_DATAPATH.parts)+1]
 
-def make_dataset_df(dsname, verbose=False):
-
-    datadir = Path(BASE_DATAPATH/dsname)
-
-    files = get_wingbeat_files(dsname)
-    labels = pd.Series(files).apply(lambda x: label_func(x)).tolist() #list(files.map(label_func))
-    if verbose:
-        print(f"Found {len(list(files))} in dataset: {dsname}, ", end="")
-        print(f"and {len(set(labels))} label(s): {np.unique(labels)}")
-    
-    lbl2files = {l: [f for f in files if label_func(f) ==l] for l in list(set(labels))}
-
-    return files, labels, lbl2files
-
-def butter_bandpass_filter(data, lowcut=120, highcut=1500, fs=8000, order=4):
+def butter_bandpass_filter(data, lowcut=120., highcut=1500., fs=8000., order=4):
     from scipy.signal import butter, lfilter
 
     nyq = 0.5 * fs
