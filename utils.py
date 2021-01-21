@@ -102,3 +102,29 @@ def np_hist(df, col, res=0.1, rot=45, fs=12):
     plt.xticks(rotation=rot, fontsize=fs);
     plt.yticks(fontsize=fs);
     plt.show()
+
+def wingbeat_duration(sig):
+    sig = pd.Series(sig.squeeze())
+    sig = sig.abs().rolling(150).mean()
+    return (sig > 0.0025).sum() / 8000. * 1000. # in ms
+
+def get_WBduration_from_loader(loader):
+    """
+    Returns the average Wingbeat duration given a dataloader
+    in milliseconds
+    """
+    from tqdm import tqdm
+
+    durations = []
+    for x,y,p,i in tqdm(loader):
+        durations += list(map(wingbeat_duration, x))
+
+    return durations, np.mean(durations), np.median(durations), np.std(durations)
+
+def get_medianWBDset_psd_from_loader(loader):
+    from tqdm import tqdm
+    psds = []
+    for x,y,p,i in tqdm(loader):
+        psds += x
+    df_psds = pd.DataFrame(np.stack(psds).squeeze())
+    return df_psds.median()
