@@ -103,12 +103,12 @@ def np_hist(df, col, res=0.1, rot=45, fs=12):
     plt.yticks(fontsize=fs);
     plt.show()
 
-def wingbeat_duration(sig):
+def wingbeat_duration(sig, rolling_window=150, fs=44100.):
     sig = pd.Series(sig.squeeze())
-    sig = sig.abs().rolling(150).mean()
-    return (sig > 0.0025).sum() / 8000. * 1000. # in ms
+    sig = sig.abs().rolling(rolling_window).mean()
+    return (sig > 0.0025).sum() / fs * 1000. # in ms
 
-def get_WBduration_from_loader(loader):
+def get_WBduration_from_loader(loader, fs=44100.):
     """
     Returns the average Wingbeat duration given a dataloader
     in milliseconds
@@ -117,7 +117,7 @@ def get_WBduration_from_loader(loader):
 
     durations = []
     for x,y,p,i in tqdm(loader):
-        durations += list(map(wingbeat_duration, x))
+        durations += list(map(lambda z: wingbeat_duration(z, fs=fs), x))
 
     return durations, np.mean(durations), np.median(durations), np.std(durations)
 
@@ -128,3 +128,20 @@ def get_medianWBDset_psd_from_loader(loader):
         psds += x
     df_psds = pd.DataFrame(np.stack(psds).squeeze())
     return df_psds.median()
+
+def get_datestr_range(start='',end=''):
+    """
+    Function to create a list of ordered date strings "%Y%m%d"
+    """
+    import datetime
+
+    start = datetime.datetime.strptime(f"{start}", "%Y%m%d")
+    end = datetime.datetime.strptime(f"{end}", "%Y%m%d")
+    date_array = \
+        (start + datetime.timedelta(days=x) for x in range(0, (end-start).days+1))
+
+    datestrlist = [] 
+    for date_object in date_array:
+        datestrlist.append(date_object.strftime("%Y%m%d"))
+    return datestrlist
+
