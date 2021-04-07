@@ -4,10 +4,10 @@ import librosa
 import numpy as np
 import psutil
 import torch
-from fastai.data.transforms import get_files
 from librosa.core.spectrum import amplitude_to_db
 from scipy.signal.spectral import spectrogram
 from utils import get_wingbeat_files, label_func
+from fastai.data.transforms import get_files
 
 torch.manual_seed(42)
 import os

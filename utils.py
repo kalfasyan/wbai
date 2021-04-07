@@ -17,6 +17,7 @@ cfg.read('config.ini')
 BASE_DATAPATH = Path(cfg.get('base','data_dir'))
 BASE_PROJECTPATH = Path(cfg.get('base','project_dir'))
 
+
 def get_wingbeat_files(dsname):
     datadir = Path(BASE_DATAPATH/dsname)
     return get_files(datadir, extensions='.wav', recurse=True, folders=None, followlinks=True)

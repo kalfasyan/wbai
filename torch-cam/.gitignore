@@ -128,7 +128,8 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
-# yannis
-data_created/
-lightning_logs/
-Open-Set-Recognition/
+# Package version
+torchcam/version.py
+
+# Conda distribution
+conda-dist/
