@@ -12,7 +12,7 @@ import sys
 sys.setrecursionlimit(10000)
 
 cfg = ConfigParser()
-cfg.read('config.ini')
+cfg.read('/home/kalfasyan/projects/wbai/config.ini')
 
 BASE_DATAPATH = Path(cfg.get('base','data_dir'))
 BASE_PROJECTPATH = Path(cfg.get('base','project_dir'))

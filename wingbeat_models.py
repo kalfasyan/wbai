@@ -1,3 +1,4 @@
+from utils import BASE_PROJECTPATH
 import torch
 torch.manual_seed(42)
 import torch.nn as nn
@@ -166,7 +167,7 @@ class Conv1dNetPSD(nn.Module):
 # Credit: Bjarte Mehus Sunde from Github
 class EarlyStopping:
     """Early stops the training if validation loss doesn't improve after a given patience."""
-    def __init__(self, patience=7, verbose=False, delta=0, path='data_created/checkpoint.pt', trace_func=print):
+    def __init__(self, patience=7, verbose=False, delta=0, path=f'{BASE_PROJECTPATH}/data_created/checkpoint.pt', trace_func=print):
         """
         Args:
             patience (int): How long to wait after last time validation loss improved.
@@ -214,6 +215,28 @@ class EarlyStopping:
             self.trace_func(f'Validation loss decreased ({self.val_loss_min:.6f} --> {val_loss:.6f}).  Saving model ...')
         torch.save(model.state_dict(), self.path)
         self.val_loss_min = val_loss
+
+class SlicedModel(nn.Module):
+    def __init__(self, model, output_layer = 'avgPool'):
+        super().__init__()
+        self.pretrained = model
+        self.output_layer = output_layer
+        self.layers = list(self.pretrained._modules.keys())
+        self.layer_count = 0
+        for l in self.layers:
+            if l != self.output_layer:
+                self.layer_count += 1
+            else:
+                break
+        for i in range(1,len(self.layers)-self.layer_count):
+            self.dummy_var = self.pretrained._modules.pop(self.layers[-i])
+        
+        self.net = nn.Sequential(self.pretrained._modules)
+        self.pretrained = None
+
+    def forward(self,x):
+        x = self.net(x)
+        return x
 
 class ModelEnsemble(nn.Module):
     def __init__(self, modelA, modelB):

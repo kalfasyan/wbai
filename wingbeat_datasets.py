@@ -22,7 +22,7 @@ from torchaudio.transforms import AmplitudeToDB, MelSpectrogram, Spectrogram
 from torchvision import transforms
 from tqdm import tqdm
 
-from utils import (BASE_DATAPATH, butter_bandpass_filter, open_wingbeat)
+from utils import (BASE_DATAPATH, BASE_PROJECTPATH, butter_bandpass_filter, open_wingbeat)
 
 num_workers = psutil.cpu_count()
 print(f"Available workers: {num_workers}")
@@ -259,7 +259,7 @@ def clean_wingbeatsdataset_inds(name="Melanogaster_RL/Y", filtered=True, low_thr
     """
 
     # Checking if the indice are alreaddy available for the given dataset and threshold
-    fname = f"./data_created/{name.replace('/','-').replace(' ', '')}_thL{low_thresh}_thH{high_thresh}_cleaned"
+    fname = f"{BASE_PROJECTPATH}/data_created/{name.replace('/','-').replace(' ', '')}_thL{low_thresh}_thH{high_thresh}_cleaned"
     if os.path.isfile(f"{fname}.npy") and os.path.isfile(f"{fname}.csv"):
         return np.load(f"{fname}.npy").tolist(), \
                 pd.read_csv(f"{fname}.csv")['fnames'].tolist(), \
