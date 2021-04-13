@@ -21,11 +21,8 @@ import psutil
 import requests
 
 from utils import *
-from wingbeat_datasets import *
-from wingbeat_models import *
-
-print(f'Total RAM      : {bytes2GB(psutil.virtual_memory().total):5.2f} GB')
-print(f'Available RAM  : {bytes2GB(psutil.virtual_memory().available):5.2f} GB\n')
+from datasets import *
+from models import *
 
 # def main():
 

@@ -1,6 +1,5 @@
 import numpy as np
 import scipy.spatial.distance as spd
-import torch
 
 import libmr
 
@@ -123,6 +122,8 @@ def compute_channel_distances(mavs, features, eu_weight=0.5):
 
 
 def compute_train_score_and_mavs_and_dists(train_class_num,trainloader,device,net):
+    import torch
+
     scores = [[] for _ in range(train_class_num)]
     with torch.no_grad():
         for batch_idx, (inputs,targets,_,_) in enumerate(trainloader):
