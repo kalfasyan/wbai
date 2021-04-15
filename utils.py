@@ -1,3 +1,4 @@
+from unicodedata import normalize
 import torchaudio
 import torch
 torch.manual_seed(42)
@@ -146,3 +147,25 @@ def get_datestr_range(start='',end=''):
         datestrlist.append(date_object.strftime("%Y%m%d"))
     return datestrlist
 
+def test_model(model, loader, dataset):
+    from tqdm import tqdm
+    from sklearn.metrics import balanced_accuracy_score, confusion_matrix
+
+    model.eval()
+    correct = 0
+    y_pred,y_true = [],[]
+    for x_batch,y_batch,path_batch,idx_batch in tqdm(loader, desc='Testing..\t'):
+        y_batch = torch.as_tensor(y_batch).type(torch.LongTensor)
+        x_batch,y_batch = x_batch.cuda(), y_batch.cuda()
+        pred = model(x_batch)
+        _, preds = torch.max(pred, 1)
+        y_pred.extend(preds.detach().cpu().numpy())
+        y_true.extend(y_batch.detach().cpu().numpy())
+        correct += (pred.argmax(axis=1) == y_batch).float().sum().item()
+    accuracy = correct / len(dataset) * 100.
+    print(f"Accuracy: {accuracy:.2f}")
+    print(f"Balanced accuracy: {balanced_accuracy_score(y_pred=y_pred, y_true=y_true)*100.:.2f}")
+    print(f"Confusion matrix: \n{confusion_matrix(y_pred=y_pred, y_true=y_true, normalize='true')}")
+
+def worker_init_fn(worker_id):                                                          
+    np.random.seed(np.random.get_state()[1][0] + worker_id)
