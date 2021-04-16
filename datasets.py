@@ -197,7 +197,7 @@ def clean_wingbeatsdataset_inds(name="Melanogaster_RL/Y", filtered=True, low_thr
     """
     Helper function to clean a WingbeatsDataset. It is used in its 'clean' method.
     """
-
+    from transforms import Bandpass, TransformWingbeat
     # Checking if the indice are alreaddy available for the given dataset and threshold
     fname = f"{BASE_PROJECTPATH}/data_created/{name.replace('/','-').replace(' ', '')}_thL{low_thresh}_thH{high_thresh}_cleaned"
     if os.path.isfile(f"{fname}.npy") and os.path.isfile(f"{fname}.csv"):
@@ -207,7 +207,7 @@ def clean_wingbeatsdataset_inds(name="Melanogaster_RL/Y", filtered=True, low_thr
 
     # Dataset of l2-normalized Power-Spectral-Densities
     if filtered:
-        dataset = WingbeatsDataset(name, transform=transforms.Compose([FilterWingbeat(setting='bandpass'), TransformWingbeat(setting='psdl2')]), clean=False, verbose=False)
+        dataset = WingbeatsDataset(name, transform=transforms.Compose([Bandpass(), TransformWingbeat(setting='psdl2')]), clean=False, verbose=False)
     else:
         dataset = WingbeatsDataset(name, transform=TransformWingbeat(setting='psdl2'), clean=False, verbose=False)
     dloader = DataLoader(dataset, batch_size=batch_size, num_workers=num_workers)

@@ -8,6 +8,7 @@ from sklearn import preprocessing
 from torchaudio.transforms import AmplitudeToDB, MelSpectrogram, Spectrogram
 from datasets import SR
 import numpy as np
+from scipy import signal as sg
 
 torch.manual_seed(42)
 
@@ -104,6 +105,38 @@ class NormalizeWingbeat(object):
         wbt = (wbt-wbt.mean()) / wbt.std()
 
         return {'x': wbt, 'y': label, 'path': sample['path'], 'idx': sample['idx']}
+
+class NormalizedPSD(object):
+
+    def __init__(self, norm='l2', fs=SR, scaling='density', window='hanning', nfft=8192, nperseg=256, noverlap=128+64, scores=False):
+        self.norm = norm
+        self.fs = fs
+        self.scaling = scaling
+        self.window = window
+        self.nfft = nfft
+        self.nperseg = nperseg
+        self.noverlap = noverlap
+        self.scores = scores
+        assert self.norm in ['l1','l2'], "Please provide a valid norm: ['l1','l2']"
+
+    def __call__(self, sample):
+        wbt = sample['x']
+        label = sample['y']
+        _, psd = sg.welch(wbt.numpy().squeeze(), 
+                            fs=SR, 
+                            scaling=self.scaling, 
+                            window=self.window, 
+                            nfft=self.nfft, 
+                            nperseg=self.nperseg, 
+                            noverlap=self.noverlap)
+
+        psd = preprocessing.normalize(psd.reshape(1,-1), norm=self.norm)
+        psdsum = psd.sum()
+
+        if self.scores:
+            return {'x': psdsum, 'y': label, 'path': sample['path'], 'idx': sample['idx']}
+        return {'x': psd, 'y': label, 'path': sample['path'], 'idx': sample['idx']}        
+
 
 class TransformWingbeat(object):
     "Class to transform wingbeat datasets."
