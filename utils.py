@@ -10,6 +10,8 @@ import pandas as pd
 import numpy as np
 from configparser import ConfigParser
 import sys
+import shutil
+from tqdm import tqdm
 sys.setrecursionlimit(10000)
 
 cfg = ConfigParser()
@@ -17,7 +19,7 @@ cfg.read('/home/kalfasyan/projects/wbai/config.ini')
 
 BASE_DATAPATH = Path(cfg.get('base','data_dir'))
 BASE_PROJECTPATH = Path(cfg.get('base','project_dir'))
-
+BASE_DATACREATEDDIR = Path(cfg.get('base','datacreated_dir'))
 
 def get_wingbeat_files(dsname):
     datadir = Path(BASE_DATAPATH/dsname)
@@ -167,5 +169,81 @@ def test_model(model, loader, dataset):
     print(f"Balanced accuracy: {balanced_accuracy_score(y_pred=y_pred, y_true=y_true)*100.:.2f}")
     print(f"Confusion matrix: \n{confusion_matrix(y_pred=y_pred, y_true=y_true, normalize='true')}")
 
+def test_model_binary(model, loader, dataset):
+    from tqdm import tqdm
+    from sklearn.metrics import balanced_accuracy_score, confusion_matrix
+
+    model.eval()
+    correct = 0
+    y_pred,y_true = [],[]
+    for x_batch,y_batch,path_batch,idx_batch in tqdm(loader, desc='Testing..\t'):
+        y_batch = torch.as_tensor(y_batch).type(torch.LongTensor)
+        x_batch,y_batch = x_batch.cuda(), y_batch.cuda()
+        pred = model(x_batch)
+        preds = (pred>0.5).type(torch.IntTensor).squeeze()
+        y_pred.extend(preds.detach().cpu().numpy())
+        y_true.extend(y_batch.detach().cpu().numpy())
+        correct += ((pred>0.5).type(torch.IntTensor).squeeze().cuda() == y_batch.squeeze()).float().sum().item()
+    accuracy = correct / len(dataset) * 100.
+    print(f"Accuracy: {accuracy:.2f}")
+    print(f"Balanced accuracy: {balanced_accuracy_score(y_pred=y_pred, y_true=y_true)*100.:.2f}")
+    print(f"Confusion matrix: \n{confusion_matrix(y_pred=y_pred, y_true=y_true, normalize='true')}")
+    return y_pred, y_true
+
 def worker_init_fn(worker_id):                                                          
     np.random.seed(np.random.get_state()[1][0] + worker_id)
+
+@torch.no_grad()
+def get_all_preds(model, loader, dataframe=False, binary=False):
+    all_preds = torch.tensor([]).cuda()
+    all_labels = torch.tensor([]).cuda()
+    all_paths = []
+    all_idx = torch.tensor([]).cuda()
+    for x_batch, y_batch, path_batch, idx_batch in tqdm(loader):
+
+        preds = model(x_batch.cuda())
+        all_preds = torch.cat((all_preds, preds), dim=0)
+        all_labels = torch.cat((all_labels, y_batch.cuda()), dim=0)
+        all_paths.extend(path_batch)
+        all_idx = torch.cat((all_idx, idx_batch.cuda()), dim=0)
+    
+    out = all_preds,all_labels,all_paths,all_idx
+
+    if not dataframe:
+        return out
+    else:
+        if binary:
+            df_out = pd.DataFrame(out[0], columns=['pred'])
+        else:
+            df_out = pd.DataFrame(out[0], columns=['pred0','pred1'])
+        df_out['y'] = out[1].cpu()
+        df_out['fnames'] = out[2]
+        df_out['idx'] = out[3].cpu()
+        df_out['softmax'] = torch.argmax(F.softmax(out[0], dim=1), dim=1).detach().cpu()
+        return df_out
+
+def plot_wingbeat(dataset, idx=None):
+    from IPython.display import Audio
+    if idx is None:
+        idx = int(torch.randint(0, len(dataset), (1,)))
+    sig = dataset[idx][0]
+    plt.plot(sig.T); plt.ylim(-.04,.04)
+    Audio(sig, rate=8000, autoplay=True)
+
+def plot_wingbeat_spectrogram(dataset, idx=None):
+    if idx is None:
+        idx = int(torch.randint(0, len(dataset), (1,)))
+    sig = dataset[idx][0]
+    plt.imshow(sig[0])
+
+def save_checkpoint(state, is_best, filename=f'{BASE_DATACREATEDDIR}/checkpoint.pth.tar'):
+    torch.save(state, filename)
+    if is_best:
+        shutil.copyfile(filename, f'{BASE_DATACREATEDDIR}/model_best.pth.tar')
+
+def load_checkpoint(filename, model, optimizer):
+    assert isinstance(filename, str) and filename.endswith('pth.tar'), "Only works with a pth.tar file."
+    checkpoint = torch.load(filename)
+    model.load_state_dict(checkpoint['state_dict'])
+    optimizer.load_state_dict(checkpoint['optimizer'])
+    return model, optimizer

@@ -7,8 +7,9 @@ import numpy as np
 
 class Conv1dNetRAW(nn.Module):
 
-    def __init__(self):
+    def __init__(self, outputs=2):
         super(Conv1dNetRAW, self).__init__()
+        self.outputs = outputs
         self.conv1 = nn.Conv1d(1, 16, 3)
         self.relu1 = nn.ReLU()
         self.bn1 = nn.BatchNorm1d(16)
@@ -36,7 +37,7 @@ class Conv1dNetRAW(nn.Module):
 
         self.dropout = nn.Dropout()
         self.avgPool = nn.AdaptiveAvgPool2d((256,1))#nn.AvgPool1d(154)
-        self.fc1 = nn.Linear(256, 2)
+        self.fc1 = nn.Linear(256, self.outputs)
 
     def forward(self, x):
         # print("######")

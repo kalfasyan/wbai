@@ -1,16 +1,14 @@
 from pathlib import Path
 
-import librosa
 import numpy as np
 import psutil
 import torch
-from librosa.core.spectrum import amplitude_to_db
-from scipy.signal.spectral import spectrogram
+
 from utils import get_wingbeat_files, label_func
-from fastai.data.transforms import get_files
 
 torch.manual_seed(42)
 import os
+from configparser import ConfigParser
 
 import pandas as pd
 import torch.nn.functional as F
@@ -18,11 +16,16 @@ from scipy import signal as sg
 from sklearn import preprocessing
 from torch._C import Value
 from torch.utils.data import DataLoader, Dataset
-from torchaudio.transforms import AmplitudeToDB, MelSpectrogram, Spectrogram
 from torchvision import transforms
 from tqdm import tqdm
 
-from utils import (BASE_DATAPATH, BASE_PROJECTPATH, butter_bandpass_filter, open_wingbeat)
+from utils import BASE_DATAPATH, BASE_PROJECTPATH, open_wingbeat
+
+cfg = ConfigParser()
+cfg.read(f'{BASE_PROJECTPATH}/config.ini')
+
+clean_lowthresh = float(cfg.get('cleanthresholds','low'))
+clean_highthresh = float(cfg.get('cleanthresholds','high'))
 
 num_workers = psutil.cpu_count()
 print(f"Available workers: {num_workers}")
@@ -193,11 +196,12 @@ class WingbeatsDataset(Dataset):
 
 
 
-def clean_wingbeatsdataset_inds(name="Melanogaster_RL/Y", filtered=True, low_thresh=8.9, high_thresh=20, batch_size=30, num_workers=num_workers):
+def clean_wingbeatsdataset_inds(name="Melanogaster_RL/Y", filtered=True, low_thresh=clean_lowthresh, high_thresh=clean_highthresh, batch_size=30, num_workers=num_workers):
     """
     Helper function to clean a WingbeatsDataset. It is used in its 'clean' method.
     """
     from transforms import Bandpass, TransformWingbeat
+
     # Checking if the indice are alreaddy available for the given dataset and threshold
     fname = f"{BASE_PROJECTPATH}/data_created/{name.replace('/','-').replace(' ', '')}_thL{low_thresh}_thH{high_thresh}_cleaned"
     if os.path.isfile(f"{fname}.npy") and os.path.isfile(f"{fname}.csv"):

@@ -34,7 +34,7 @@ class RandomRoll(object):
     def __call__(self, sample):
         wbt, label = sample['x'], sample['y']
         if torch.rand(1) < self.p:
-            wbt = torch.roll(wbt, shifts=np.random.randint(500,4500))
+            wbt = torch.roll(wbt, shifts= int(torch.randint(500,4500,(1,))))
         return {'x': wbt, 'y': label, 'path': sample['path'], 'idx': sample['idx']}                                                        
 
 class RandomFlip(object):
@@ -57,13 +57,11 @@ class RandomNoise(object):
     def __call__(self, sample):
         wbt, label = sample['x'], sample['y']
         if torch.rand(1) < self.p:
-            rdm = np.random.choice(range(0,4000))
-            rdm_width = np.random.choice(range(self.width_min, self.width_max))
-            noise = np.random.normal(0, 0.002, rdm_width)
-            wbt[:, rdm:rdm+rdm_width] = torch.from_numpy(noise).reshape(1,-1)
+            rdm = torch.randint(0, 4000, (1,)) 
+            rdm_width = torch.randint(self.width_min, self.width_max, (1,)) 
+            noise = torch.normal(0, 0.002, (rdm_width,))
+            wbt[:, rdm:rdm+rdm_width] = noise.reshape(1,-1)
         return {'x': wbt, 'y': label, 'path': sample['path'], 'idx': sample['idx']}                                                        
-
-
 class Bandpass(object):
     "Class to apply a signal processing filter to a dataset"
 
@@ -108,7 +106,7 @@ class NormalizeWingbeat(object):
 
 class NormalizedPSD(object):
 
-    def __init__(self, norm='l2', fs=SR, scaling='density', window='hanning', nfft=8192, nperseg=256, noverlap=128+64, scores=False):
+    def __init__(self, norm='l2', fs=SR, scaling='density', window='hanning', nfft=8192, nperseg=256, noverlap=128+64):
         self.norm = norm
         self.fs = fs
         self.scaling = scaling
@@ -116,7 +114,6 @@ class NormalizedPSD(object):
         self.nfft = nfft
         self.nperseg = nperseg
         self.noverlap = noverlap
-        self.scores = scores
         assert self.norm in ['l1','l2'], "Please provide a valid norm: ['l1','l2']"
 
     def __call__(self, sample):
@@ -129,13 +126,42 @@ class NormalizedPSD(object):
                             nfft=self.nfft, 
                             nperseg=self.nperseg, 
                             noverlap=self.noverlap)
+        psd = preprocessing.normalize(psd.reshape(1,-1), norm=self.norm)
+        return {'x': psd, 'y': label, 'path': sample['path'], 'idx': sample['idx']}        
+
+class NormalizedPSDSums(object):
+
+    def __init__(self, norm='l2', fs=SR, scaling='density', window='hanning', nfft=8192, nperseg=256, noverlap=128+64):
+        self.norm = norm
+        self.fs = fs
+        self.scaling = scaling
+        self.window = window
+        self.nfft = nfft
+        self.nperseg = nperseg
+        self.noverlap = noverlap
+        assert self.norm in ['l1','l2'], "Please provide a valid norm: ['l1','l2']"
+
+    def normalized_psd_sum(self, wbt):
+        _, psd = sg.welch(wbt.numpy().squeeze(), 
+                    fs=SR, 
+                    scaling=self.scaling, 
+                    window=self.window, 
+                    nfft=self.nfft, 
+                    nperseg=self.nperseg, 
+                    noverlap=self.noverlap)
 
         psd = preprocessing.normalize(psd.reshape(1,-1), norm=self.norm)
-        psdsum = psd.sum()
+        return psd.sum()
 
-        if self.scores:
-            return {'x': psdsum, 'y': label, 'path': sample['path'], 'idx': sample['idx']}
-        return {'x': psd, 'y': label, 'path': sample['path'], 'idx': sample['idx']}        
+    def __call__(self, sample):
+        wbt = sample['x']
+        label = sample['y']
+
+        score1 = self.normalized_psd_sum(wbt.T[:2501])
+        score2 = self.normalized_psd_sum(wbt.T[2500:])
+        score3 = self.normalized_psd_sum(wbt.T[1250:3750])        
+
+        return {'x': min([score1,score2,score3]), 'y': label, 'path': sample['path'], 'idx': sample['idx']}
 
 
 class TransformWingbeat(object):
