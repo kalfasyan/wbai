@@ -25,7 +25,8 @@ class Focus(object):
         wbt = wbt.reshape(wbt.shape[0], -1, 250).mean(dim=2)
         wbt = torch.where(wbt.T> 0.0025, 1, 0).repeat_interleave(250)
         wbt = torch.mul(wbt,wbtold)
-        return {'x': wbt, 'y': label, 'path': sample['path'], 'idx': sample['idx']}
+        sample['x'] = wbt
+        return sample
 
 class RandomRoll(object):
     def __init__(self, p=0.5):
@@ -45,8 +46,8 @@ class RandomFlip(object):
         wbt, label = sample['x'], sample['y']
         if torch.rand(1) < self.p:
             wbt = torch.flip(wbt, [1])
-        return {'x': wbt, 'y': label, 'path': sample['path'], 'idx': sample['idx']}                                                        
-
+        sample['x'] = wbt
+        return sample
 class RandomNoise(object):
     def __init__(self, p=0.5, width_min=500, width_max=1000):
         self.p = p
@@ -61,24 +62,24 @@ class RandomNoise(object):
             rdm_width = torch.randint(self.width_min, self.width_max, (1,)) 
             noise = torch.normal(0, 0.002, (rdm_width,))
             wbt[:, rdm:rdm+rdm_width] = noise.reshape(1,-1)
-        return {'x': wbt, 'y': label, 'path': sample['path'], 'idx': sample['idx']}                                                        
+        sample['x'] = wbt
+        return sample
 class Bandpass(object):
     "Class to apply a signal processing filter to a dataset"
 
-    def __init__(self, lowcut=120., highcut=1500., fs=8000., order=4):
+    def __init__(self, lowcut=120., highcut=1500., order=4):
         self.lowcut = lowcut
         self.highcut = highcut
-        self.fs = fs
         self.order = order
 
     def __call__(self, sample):
-        wbt, label = sample['x'], sample['y']
+        wbt, label, rate = sample['x'], sample['y'], sample['rate']
         wbt = torch.from_numpy(butter_bandpass_filter(wbt, 
                                                     lowcut=self.lowcut,
                                                     highcut=self.highcut,
-                                                    fs=self.fs,
+                                                    fs=rate,
                                                     order=self.order)).float()
-        return {'x': wbt, 'y': label, 'path': sample['path'], 'idx': sample['idx']}                                                        
+        return sample
 
 class FilterWingbeat(object):
     "Class to apply a signal processing filter to a dataset"
@@ -94,21 +95,21 @@ class FilterWingbeat(object):
         else:
             raise NotImplementedError('!')
 
-        return {'x': wbt, 'y': label, 'path': sample['path'], 'idx': sample['idx']}
+        sample['x'] = wbt
+        return sample
 
 class NormalizeWingbeat(object):
     "Class to normalize a wbt."
     def __call__(self, sample): 
         wbt, label = sample['x'], sample['y']
         wbt = (wbt-wbt.mean()) / wbt.std()
-
-        return {'x': wbt, 'y': label, 'path': sample['path'], 'idx': sample['idx']}
+        sample['x'] = wbt
+        return sample
 
 class NormalizedPSD(object):
 
-    def __init__(self, norm='l2', fs=SR, scaling='density', window='hanning', nfft=8192, nperseg=256, noverlap=128+64):
+    def __init__(self, norm='l2', scaling='density', window='hanning', nfft=8192, nperseg=256, noverlap=128+64):
         self.norm = norm
-        self.fs = fs
         self.scaling = scaling
         self.window = window
         self.nfft = nfft
@@ -117,23 +118,22 @@ class NormalizedPSD(object):
         assert self.norm in ['l1','l2'], "Please provide a valid norm: ['l1','l2']"
 
     def __call__(self, sample):
-        wbt = sample['x']
-        label = sample['y']
+        wbt, label, rate = sample['x'], sample['y'], sample['rate']
         _, psd = sg.welch(wbt.numpy().squeeze(), 
-                            fs=SR, 
+                            fs=rate, 
                             scaling=self.scaling, 
                             window=self.window, 
                             nfft=self.nfft, 
                             nperseg=self.nperseg, 
                             noverlap=self.noverlap)
         psd = preprocessing.normalize(psd.reshape(1,-1), norm=self.norm)
-        return {'x': psd, 'y': label, 'path': sample['path'], 'idx': sample['idx']}        
+        sample['x'] = psd
+        return sample
 
 class NormalizedPSDSums(object):
 
-    def __init__(self, norm='l2', fs=SR, scaling='density', window='hanning', nfft=8192, nperseg=256, noverlap=128+64):
+    def __init__(self, norm='l2', scaling='density', window='hanning', nfft=8192, nperseg=256, noverlap=128+64):
         self.norm = norm
-        self.fs = fs
         self.scaling = scaling
         self.window = window
         self.nfft = nfft
@@ -141,9 +141,9 @@ class NormalizedPSDSums(object):
         self.noverlap = noverlap
         assert self.norm in ['l1','l2'], "Please provide a valid norm: ['l1','l2']"
 
-    def normalized_psd_sum(self, wbt):
+    def normalized_psd_sum(self, wbt, rate):
         _, psd = sg.welch(wbt.numpy().squeeze(), 
-                    fs=SR, 
+                    fs=rate, 
                     scaling=self.scaling, 
                     window=self.window, 
                     nfft=self.nfft, 
@@ -154,14 +154,14 @@ class NormalizedPSDSums(object):
         return psd.sum()
 
     def __call__(self, sample):
-        wbt = sample['x']
-        label = sample['y']
+        wbt, label, rate = sample['x'], sample['y'], sample['rate']
 
-        score1 = self.normalized_psd_sum(wbt.T[:2501])
-        score2 = self.normalized_psd_sum(wbt.T[2500:])
-        score3 = self.normalized_psd_sum(wbt.T[1250:3750])        
+        score1 = self.normalized_psd_sum(wbt.T[:2501], rate)
+        score2 = self.normalized_psd_sum(wbt.T[2500:], rate)
+        score3 = self.normalized_psd_sum(wbt.T[1250:3750], rate) 
 
-        return {'x': min([score1,score2,score3]), 'y': label, 'path': sample['path'], 'idx': sample['idx']}
+        sample['x'] = min([score1,score2,score3])
+        return sample
 
 
 class TransformWingbeat(object):
@@ -180,8 +180,7 @@ class TransformWingbeat(object):
         assert len(self.setting), "Please provide a transformation setting."
 
     def __call__(self, sample):
-        wbt = sample['x']
-        label = sample['y']
+        wbt, label, rate = sample['x'], sample['y'], sample['rate']
         
         if self.setting.startswith('stft'):
             spec = Spectrogram(n_fft=256, hop_length=42)(wbt)
@@ -191,9 +190,11 @@ class TransformWingbeat(object):
             spec = spec[:,:,:,0]
         
             if self.setting == 'stftraw':
-                return {'x': (wbt,spec), 'y': label, 'path': sample['path'], 'idx': sample['idx']}
+                sample['x'] = (wbt,spec)
+                return sample
             else:
-                return {'x': spec, 'y': label, 'path': sample['path'], 'idx': sample['idx']}
+                sample['x'] = spec
+                return sample
 
         elif self.setting.startswith('melstft'):
             # TODO: Something wrong in the output spec. Missing frequencies.
@@ -203,23 +204,27 @@ class TransformWingbeat(object):
             spec = spec[:,:,:,0]
         
             if self.setting == 'melstftraw':
-                return {'x': (wbt,spec), 'y': label, 'path': sample['path'], 'idx': sample['idx']}
+                sample['x'] = (wbt,spec)
+                return sample
             else:
-                return {'x': spec, 'y': label, 'path': sample['path'], 'idx': sample['idx']}
+                sample['x'] = spec
+                return sample
 
         elif self.setting == 'reassigned_stft':
-            freqs, times, mags = librosa.reassigned_spectrogram(y=wbt.numpy().squeeze(), sr=SR, 
+            freqs, times, mags = librosa.reassigned_spectrogram(y=wbt.numpy().squeeze(), sr=rate, 
                                                                 n_fft=256, hop_length=42, center=False)
             mags_db = librosa.power_to_db(mags)
             mags_db = np.expand_dims(librosa.power_to_db(mags),axis=0)
             mags_db = torch.from_numpy(np.repeat(mags_db[...,np.newaxis],3,0))
             mags_db = mags_db[:,:,:,0]
-            return {'x': mags_db, 'y': label, 'path': sample['path'], 'idx': sample['idx']}
+            sample['x'] = mags_db
+            return sample
 
         elif self.setting.startswith('psd'):
-            _, psd = sg.welch(wbt.numpy().squeeze(), fs=SR, scaling='density', window='hanning', nfft=8192, nperseg=256, noverlap=128+64)
+            _, psd = sg.welch(wbt.numpy().squeeze(), fs=rate, scaling='density', window='hanning', nfft=8192, nperseg=256, noverlap=128+64)
             if self.setting == 'psdl1':
                 psd = preprocessing.normalize(psd.reshape(1,-1), norm='l1')
             elif self.setting == 'psdl2':
                 psd = preprocessing.normalize(psd.reshape(1,-1), norm='l2')
-            return {'x': psd, 'y': label, 'path': sample['path'], 'idx': sample['idx']}
+            sample['x'] = psd
+            return sample

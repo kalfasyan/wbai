@@ -32,6 +32,9 @@ print(f"Available workers: {num_workers}")
 
 SR = 8000
 class DataFrameset(Dataset):
+    """
+    Dataset class that can take a pandas.DataFrame as input.
+    """
     def __init__(self, df, transform=None):
         self.df = df.reset_index(drop=True)
         self.transform = transform
@@ -92,13 +95,13 @@ class WingbeatsDataset(Dataset):
 
         fname = self.files[idx]
         label = self.labels[idx]
-        wbt = open_wingbeat(fname, plot=False)
-        sample = {'x': wbt, 'y': label, 'path': str(fname), 'idx': idx}
+        wbt,rate = open_wingbeat(fname, plot=False, rate=True)
+        sample = {'x': wbt, 'y': label, 'path': str(fname), 'idx': idx, 'rate': rate}
 
         if self.transform:
             sample = self.transform(sample)
 
-        return sample['x'], sample['y'], sample['path'], sample['idx']
+        return sample['x'], sample['y'], sample['path'], sample['idx'], sample['rate']
 
     def onehotlabels(self):
         "To be used when selecting a dataset with more than one species"

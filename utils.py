@@ -25,7 +25,7 @@ def get_wingbeat_files(dsname):
     datadir = Path(BASE_DATAPATH/dsname)
     return get_files(datadir, extensions='.wav', recurse=True, folders=None, followlinks=True)
 
-def open_wingbeat(fname, plot=False, verbose=False):
+def open_wingbeat(fname, plot=False, verbose=False, rate=False):
     waveform, sample_rate = torchaudio.load(str(fname))
 
     if verbose:
@@ -37,6 +37,8 @@ def open_wingbeat(fname, plot=False, verbose=False):
         plt.plot(waveform.t().numpy())
         plt.show()
 
+    if rate:
+        return waveform, sample_rate
     return waveform
 
 def label_func(fname):
@@ -107,10 +109,13 @@ def np_hist(df, col, res=0.1, rot=45, fs=12):
     plt.yticks(fontsize=fs);
     plt.show()
 
-def wingbeat_duration(sig, rolling_window=150, fs=44100.):
+def wingbeat_duration(sig, rolling_window=150, th=0.0025, fs=44100., plot=False):
     sig = pd.Series(sig.squeeze())
     sig = sig.abs().rolling(rolling_window).mean()
-    return (sig > 0.0025).sum() / fs * 1000. # in ms
+    if plot:
+        import matplotlib.pyplot as plt
+        plt.plot(sig)
+    return (sig > th).sum() / fs * 1000. # in ms
 
 def get_WBduration_from_loader(loader, fs=44100.):
     """
