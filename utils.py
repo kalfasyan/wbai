@@ -109,6 +109,28 @@ def np_hist(df, col, res=0.1, rot=45, fs=12):
     plt.yticks(fontsize=fs);
     plt.show()
 
+def get_wbt_duration(fname, window=150, th=0.0025, plot=False):
+    sig, rate = open_wingbeat(fname, rate=True)
+    sig = pd.Series(sig.squeeze()).abs().rolling(window).mean()
+    if plot:
+        import matplotlib.pyplot as plt
+        plt.plot(sig)
+        plt.plot(((sig > th)).astype(int)*.02)
+    return (sig > th).sum() / rate * 1000. # in ms
+
+def get_wbt_duration_loader(loader, th=0.0025):
+    """
+    Returns the average Wingbeat duration given a dataloader
+    in milliseconds
+    """
+    from tqdm import tqdm
+
+    durations = []
+    for x,y,p,i,r in tqdm(loader):
+        durations += list(map(lambda z: get_wbt_duration(z), x))
+
+    return durations, np.mean(durations), np.median(durations), np.std(durations)
+
 def wingbeat_duration(sig, rolling_window=150, th=0.0025, fs=44100., plot=False):
     sig = pd.Series(sig.squeeze())
     sig = sig.abs().rolling(rolling_window).mean()
@@ -117,7 +139,7 @@ def wingbeat_duration(sig, rolling_window=150, th=0.0025, fs=44100., plot=False)
         plt.plot(sig)
     return (sig > th).sum() / fs * 1000. # in ms
 
-def get_WBduration_from_loader(loader, fs=44100.):
+def get_WBduration_from_loader(loader, th=0.0025, fs=44100.):
     """
     Returns the average Wingbeat duration given a dataloader
     in milliseconds

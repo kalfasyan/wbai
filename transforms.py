@@ -27,7 +27,6 @@ class Focus(object):
         wbt = torch.mul(wbt,wbtold)
         sample['x'] = wbt
         return sample
-
 class RandomRoll(object):
     def __init__(self, p=0.5):
         self.p = p
@@ -36,8 +35,8 @@ class RandomRoll(object):
         wbt, label = sample['x'], sample['y']
         if torch.rand(1) < self.p:
             wbt = torch.roll(wbt, shifts= int(torch.randint(500,4500,(1,))))
-        return {'x': wbt, 'y': label, 'path': sample['path'], 'idx': sample['idx']}                                                        
-
+        sample['x'] = wbt
+        return sample
 class RandomFlip(object):
     def __init__(self, p=0.5):
         self.p = p
@@ -79,6 +78,7 @@ class Bandpass(object):
                                                     highcut=self.highcut,
                                                     fs=rate,
                                                     order=self.order)).float()
+        sample['x'] = wbt
         return sample
 
 class FilterWingbeat(object):

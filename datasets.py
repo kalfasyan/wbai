@@ -74,9 +74,9 @@ class WingbeatsDataset(Dataset):
         self.sample = sample
 
         if self.clean:
-            self.files, self.labels, self.lbl2files, self.paths, self.sums = make_dataset_df(dsname, sample=self.sample, clean=self.clean, verbose=True)
+            self.files, self.labels, self.lbl2files, self.paths, self.sums = make_dataset_df(dsname, sample=self.sample, clean=self.clean, verbose=self.verbose)
         else:
-            self.files, self.labels, self.lbl2files = make_dataset_df(dsname, sample=self.sample, clean=self.clean, verbose=True)
+            self.files, self.labels, self.lbl2files = make_dataset_df(dsname, sample=self.sample, clean=self.clean, verbose=self.verbose)
 
         if len(custom_label) == 1:
             self.labels = [custom_label[0] for _ in self.labels]
@@ -224,7 +224,7 @@ def clean_wingbeatsdataset_inds(name="Melanogaster_RL/Y", filtered=True, low_thr
     all_sums_valid = torch.tensor([])
     all_paths_valid = []
 
-    for i, (x_batch,y_batch,path_batch,idx) in enumerate(tqdm(dloader, desc=f"Cleaning dataset {name}..\t")):
+    for i, (x_batch,y_batch,path_batch,idx,rate) in enumerate(tqdm(dloader, desc=f"Cleaning dataset {name}..\t")):
         # Using the sums of l2-normalized PSDs
         xb_sums = x_batch.squeeze().sum(axis=1)
         # We set a threshold to get valid wingbeats, all invalid set to zero
