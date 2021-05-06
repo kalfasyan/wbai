@@ -6,6 +6,7 @@ from transforms import Bandpass, NormalizedPSDSums, TransformWingbeat
 import pandas as pd
 from datasets import WingbeatsDataset
 from utils import open_wingbeat, get_wbt_duration
+import time
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 
@@ -13,11 +14,12 @@ mpl.rcParams['axes.spines.right'] = False
 mpl.rcParams['axes.spines.top'] = False
 class WingbeatDatasetProfiler(object):
 
-    def __init__(self, dsname, bandpass_high=1500., rollwindow=150, noisethresh=0.003):
+    def __init__(self, dsname, bandpass_high=1500., rollwindow=150, noisethresh=0.003, rpiformat=False):
         self.dsname = dsname
         self.bandpass_high =bandpass_high
         self.rollwindow = rollwindow
         self.noisethresh = noisethresh
+        self.rpiformat = rpiformat
         self.wbts = WingbeatsDataset(dsname=self.dsname, 
                                                 verbose=False,
                                                 custom_label=[0], 
@@ -42,6 +44,7 @@ class WingbeatDatasetProfiler(object):
         d = WingbeatsDataset(dsname=self.dsname, custom_label=[1], clean=False, transform=transforms.Compose([Bandpass(highcut=self.bandpass_high), NormalizedPSDSums(norm='l2')]))
         dloader = DataLoader(d, batch_size=batch_size, shuffle=False, num_workers=4, pin_memory=True)
         sums,paths,labels,idx = [],[],[],[]
+        time.sleep(.5)
         for s,l,p,i,_ in tqdm(dloader, total=len(d)//batch_size, desc='Collecting all data from the dataloader..'):
             sums.extend(s)
             paths.extend(p)
@@ -55,7 +58,10 @@ class WingbeatDatasetProfiler(object):
         df['idx'] = idx
         df['y'] = labels
         df['fname'] = df.x.apply(lambda x: x.split('/')[-1][:-4])
-        df['date'] = df.fname.apply(lambda x: pd.to_datetime(''.join(x.split('_')[0:2]), format='F%y%m%d%H%M%S'))
+        if self.rpiformat:
+            df['date'] = df.fname.apply(lambda x: pd.to_datetime(''.join(x.split('_')[0:2])))
+        else:
+            df['date'] = df.fname.apply(lambda x: pd.to_datetime(''.join(x.split('_')[0:2]), format=f'F%y%m%d%H%M%S'))
         df['datestr'] = df['date'].apply(lambda x: x.strftime("%Y%m%d"))
         df['datehourstr'] = df['date'].apply(lambda x: x.strftime("%y%m%d_%H"))
         self.df = df
@@ -85,12 +91,18 @@ class WingbeatDatasetProfiler(object):
         if not len(df):
             df = self.df.sample(len(self.df), replace=False)
 
-        plt.figure(figsize=(20,12))
+        if self.rpiformat:
+            plt.figure(figsize=(30,12))
+        else:
+            plt.figure(figsize=(20,12))
+
         for i in tqdm(range(20)):
             plt.subplot(4,5,i+1)
             sig = self.wbts[df.iloc[i].name][0].squeeze()
             plt.plot(sig.T);
-            plt.title(df.loc[df.iloc[i].name].score, y=0.9)
+            score = df.loc[df.iloc[i].name].score
+            duration = df.loc[df.iloc[i].name].duration
+            plt.title(f"score:{score:.0f}, duration:{duration:.0f}", y=0.9)
             if noaxis:
                 plt.axis('off')
             plt.ylim(-1*ylim, ylim)
@@ -99,12 +111,18 @@ class WingbeatDatasetProfiler(object):
         if not len(df):
             df = self.df.sample(len(self.df), replace=False)
 
-        plt.figure(figsize=(20,12))
+        if self.rpiformat:
+            plt.figure(figsize=(30,12))
+        else:
+            plt.figure(figsize=(20,12))
+
         for i in tqdm(range(20)):
             plt.subplot(4,5,i+1)
             sig = self.psds[df.iloc[i].name][0].squeeze()[:1500]
             plt.plot(sig.T);
-            plt.title(df.loc[df.iloc[i].name].score, y=0.9)
+            score = df.loc[df.iloc[i].name].score
+            duration = df.loc[df.iloc[i].name].duration
+            plt.title(f"score:{score:.0f}, duration:{duration:.0f}", y=0.9)
             if noaxis:
                 plt.axis('off')
             plt.ylim(0,.18)
@@ -113,16 +131,21 @@ class WingbeatDatasetProfiler(object):
         if not len(df):
             df = self.df.sample(len(self.df), replace=False)
 
-        plt.figure(figsize=(20,12))
+        if self.rpiformat:
+            plt.figure(figsize=(30,12))
+        else:
+            plt.figure(figsize=(20,12))
         for i in tqdm(range(20)):
             plt.subplot(4,5,i+1)
             stft = torch.flipud(self.stfts[df.iloc[i].name][0][0])
-            plt.imshow(stft);
-            plt.title(df.loc[df.iloc[i].name].score, y=0.98)
+            plt.imshow(stft,interpolation='nearest', aspect='auto');
+            score = df.loc[df.iloc[i].name].score
+            duration = df.loc[df.iloc[i].name].duration
+            plt.title(f"score:{score:.0f}, duration:{duration:.0f}", y=0.9)
             if noaxis:
                 plt.axis('off')
 
-    def plot_daterange(self, start='', end='', figx=8, figy=26, linewidth=4):
+    def plot_daterange(self, df=pd.DataFrame(), start='', end='', figx=8, figy=26, linewidth=4):
         """
         Method to plot a histogram within a date range (starting from earliest datapoint to latest)
         """
@@ -130,13 +153,16 @@ class WingbeatDatasetProfiler(object):
         import matplotlib.pyplot as plt
 
         from utils import get_datestr_range
+    
+        if not len(df):
+            df = self.df.sample(len(self.df), replace=False)
 
         if '' in {start, end}:
-            start = self.df.datestr.sort_values().iloc[0]
-            end = self.df.datestr.sort_values().iloc[-1] 
+            start = df.datestr.sort_values().iloc[0]
+            end = df.datestr.sort_values().iloc[-1] 
         all_dates = get_datestr_range(start=start,end=end)
 
-        hist_dict = self.df.datestr.value_counts().to_dict()
+        hist_dict = df.datestr.value_counts().to_dict()
         mydict = {}
         for d in all_dates:
             if d not in list(hist_dict.keys()):
