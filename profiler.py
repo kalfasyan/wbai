@@ -2,11 +2,12 @@ import torch
 from torch.utils.data import DataLoader, Dataset
 from torchvision import transforms
 from tqdm import tqdm
-from transforms import Bandpass, NormalizedPSDSums, TransformWingbeat
+from transforms import Bandpass, NormalizedPSD, NormalizedPSDSums, TransformWingbeat
 import pandas as pd
 from datasets import WingbeatsDataset
 from utils import open_wingbeat, get_wbt_duration
 import time
+from scipy.signal import find_peaks
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 
@@ -14,26 +15,27 @@ mpl.rcParams['axes.spines.right'] = False
 mpl.rcParams['axes.spines.top'] = False
 class WingbeatDatasetProfiler(object):
 
-    def __init__(self, dsname, bandpass_high=1500., rollwindow=150, noisethresh=0.003, rpiformat=False):
+    def __init__(self, dsname, bandpass_high=1500., rollwindow=150, noisethresh=0.003, rpiformat=False, custom_label=[0]):
         self.dsname = dsname
         self.bandpass_high =bandpass_high
         self.rollwindow = rollwindow
         self.noisethresh = noisethresh
         self.rpiformat = rpiformat
+        self.custom_label = custom_label
         self.wbts = WingbeatsDataset(dsname=self.dsname, 
                                                 verbose=False,
-                                                custom_label=[0], 
+                                                custom_label=self.custom_label, 
                                                 clean=False, 
                                                 transform=transforms.Compose([Bandpass(highcut=self.bandpass_high)]))
         self.psds = WingbeatsDataset(dsname=self.dsname, 
                                                 verbose=False,
-                                                custom_label=[0], 
+                                                custom_label=self.custom_label, 
                                                 clean=False, 
                                                 transform=transforms.Compose([Bandpass(highcut=self.bandpass_high), 
                                                                             TransformWingbeat(setting='psdl2')]))
         self.stfts = WingbeatsDataset(dsname=self.dsname, 
                                                 verbose=False,
-                                                custom_label=[0], 
+                                                custom_label=self.custom_label, 
                                                 clean=False, 
                                                 transform=transforms.Compose([Bandpass(highcut=self.bandpass_high), 
                                                                             TransformWingbeat(setting='stft')]))
@@ -41,22 +43,31 @@ class WingbeatDatasetProfiler(object):
 
     def get_dataset_df(self, batch_size=16):
 
-        d = WingbeatsDataset(dsname=self.dsname, custom_label=[1], clean=False, transform=transforms.Compose([Bandpass(highcut=self.bandpass_high), NormalizedPSDSums(norm='l2')]))
+        d = WingbeatsDataset(dsname=self.dsname, 
+                            custom_label=self.custom_label, 
+                            clean=False, 
+                            transform=transforms.Compose([Bandpass(highcut=self.bandpass_high), 
+                                                            NormalizedPSD(norm='l2', scaling='density', window='hanning', nfft=4096, nperseg=2048, noverlap=1024)]))
+
         dloader = DataLoader(d, batch_size=batch_size, shuffle=False, num_workers=4, pin_memory=True)
-        sums,paths,labels,idx = [],[],[],[]
+
+        sums,paths,labels,idx,peaks = [],[],[],[],[]
         time.sleep(.5)
-        for s,l,p,i,_ in tqdm(dloader, total=len(d)//batch_size, desc='Collecting all data from the dataloader..'):
-            sums.extend(s)
+        for x,l,p,i,_ in tqdm(dloader, total=len(d)//batch_size, desc='Collecting all data from the dataloader..'):
             paths.extend(p)
-            idx.extend(i)
-            labels.extend(l)
+            idx.extend(i.numpy())
+            labels.extend(l.numpy())
+            for sig in x:
+                sums.extend([sig.squeeze().sum()])
+                p, _ = find_peaks(sig.squeeze(), height=0.04, prominence=0.001, width=1, distance=5)
+                peaks.extend([len(p)])
+
+
         print("Creating a pandas Dataframe with file-paths, clean-scores, duration, sums of abs values, indice and labels..")        
-        df = pd.DataFrame({"x": paths, "score": torch.tensor(sums)})
+        df = pd.DataFrame({"x": paths, "y": labels, "idx": idx, "score": torch.tensor(sums), "peaks": peaks})
         df['duration'] = df.x.apply(lambda x: get_wbt_duration(x, window=self.rollwindow, th=self.noisethresh))
-        df['sum'] = df.x.apply(lambda x: open_wingbeat(x).abs().sum())
-        df['max'] = df.x.apply(lambda x: open_wingbeat(x).abs().max())
-        df['idx'] = idx
-        df['y'] = labels
+        df['sum'] = df.x.apply(lambda x: open_wingbeat(x).abs().sum().numpy())
+        df['max'] = df.x.apply(lambda x: open_wingbeat(x).abs().max().numpy())
         df['fname'] = df.x.apply(lambda x: x.split('/')[-1][:-4])
         if self.rpiformat:
             df['date'] = df.fname.apply(lambda x: pd.to_datetime(''.join(x.split('_')[0:2])))
@@ -87,7 +98,7 @@ class WingbeatDatasetProfiler(object):
         plt.show()
         return sub
 
-    def plot_random_wbts(self, df=pd.DataFrame(), noaxis=True, ylim=.06):
+    def plot_random_wbts(self, df=pd.DataFrame(), noaxis=True, ylim=.06, title=''):
         if not len(df):
             df = self.df.sample(len(self.df), replace=False)
 
@@ -102,12 +113,16 @@ class WingbeatDatasetProfiler(object):
             plt.plot(sig.T);
             score = df.loc[df.iloc[i].name].score
             duration = df.loc[df.iloc[i].name].duration
-            plt.title(f"score:{score:.0f}, duration:{duration:.0f}", y=0.9)
+            filename = df.loc[df.iloc[i].name].x.split('/')[-1]
+            if title == 'filename':
+                plt.title(filename)
+            else:
+                plt.title(f"score:{score:.0f}, duration:{duration:.0f}", y=0.9)
             if noaxis:
                 plt.axis('off')
             plt.ylim(-1*ylim, ylim)
 
-    def plot_random_psds(self, df=pd.DataFrame(), noaxis=True):
+    def plot_random_psds(self, df=pd.DataFrame(), noaxis=True, title='score'):
         if not len(df):
             df = self.df.sample(len(self.df), replace=False)
 
@@ -118,11 +133,18 @@ class WingbeatDatasetProfiler(object):
 
         for i in tqdm(range(20)):
             plt.subplot(4,5,i+1)
-            sig = self.psds[df.iloc[i].name][0].squeeze()[:1500]
+            sig = self.psds[df.iloc[i].name][0].squeeze()[:2000]
+
             plt.plot(sig.T);
             score = df.loc[df.iloc[i].name].score
             duration = df.loc[df.iloc[i].name].duration
-            plt.title(f"score:{score:.0f}, duration:{duration:.0f}", y=0.9)
+            filename = df.loc[df.iloc[i].name].x.split('/')[-1]
+            peaks = df.loc[df.iloc[i].name].peaks
+            
+            if title == 'filename':
+                plt.title(filename)
+            else:
+                plt.title(f"score:{score:.0f}, duration:{duration:.0f}, peaks:{peaks}", y=0.9)
             if noaxis:
                 plt.axis('off')
             plt.ylim(0,.18)

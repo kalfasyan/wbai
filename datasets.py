@@ -49,8 +49,8 @@ class DataFrameset(Dataset):
         sample = self.df.loc[idx]
         fname = sample["x"]
         label = sample["y"]
-        wbt = open_wingbeat(fname, plot=False)
-        sample = {'x': wbt, 'y': label, 'path': str(fname), 'idx': idx}
+        wbt,rate = open_wingbeat(fname, plot=False, rate=True)
+        sample = {'x': wbt, 'y': label, 'path': str(fname), 'idx': idx, 'rate': rate}
 
         if self.transform:
             sample = self.transform(sample)

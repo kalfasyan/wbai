@@ -11,6 +11,7 @@ import numpy as np
 from configparser import ConfigParser
 import sys
 import shutil
+from shutil import copy2
 from tqdm import tqdm
 sys.setrecursionlimit(10000)
 
@@ -274,3 +275,7 @@ def load_checkpoint(filename, model, optimizer):
     model.load_state_dict(checkpoint['state_dict'])
     optimizer.load_state_dict(checkpoint['optimizer'])
     return model, optimizer
+
+def copy_files(filelist, destination):
+    for f in tqdm(filelist, total=len(filelist), desc="Copying files.."):
+        copy2(f, destination)

@@ -164,6 +164,7 @@ class NormalizedPSDSums(object):
         return sample
 
 
+
 class TransformWingbeat(object):
     "Class to transform wingbeat datasets."
     """
@@ -183,7 +184,7 @@ class TransformWingbeat(object):
         wbt, label, rate = sample['x'], sample['y'], sample['rate']
         
         if self.setting.startswith('stft'):
-            spec = Spectrogram(n_fft=256, hop_length=42)(wbt)
+            spec = Spectrogram(n_fft=1000, win_length=20, window_fn=torch.hann_window, power=2, normalized=True)(wbt)
             if self.setting == 'stftcrop': spec = spec[:,5:70,:]
             spec = AmplitudeToDB()(spec)
             spec = torch.from_numpy(np.repeat(spec.numpy()[...,np.newaxis],3,0))
@@ -198,7 +199,7 @@ class TransformWingbeat(object):
 
         elif self.setting.startswith('melstft'):
             # TODO: Something wrong in the output spec. Missing frequencies.
-            spec = MelSpectrogram(n_fft=256, hop_length=42)(wbt)
+            spec = MelSpectrogram(sample_rate=rate, n_fft=8192, hop_length=25, f_max=3500, win_length=50, window_fn=torch.hann_window, power=2, normalized=True)(wbt)
             spec = AmplitudeToDB()(spec)
             spec = torch.from_numpy(np.repeat(spec.numpy()[...,np.newaxis],3,0))
             spec = spec[:,:,:,0]
@@ -221,10 +222,10 @@ class TransformWingbeat(object):
             return sample
 
         elif self.setting.startswith('psd'):
-            _, psd = sg.welch(wbt.numpy().squeeze(), fs=rate, scaling='density', window='hanning', nfft=8192, nperseg=256, noverlap=128+64)
+            _, psd = sg.welch(wbt.numpy().squeeze(), fs=rate, scaling='density', window='hanning', nfft=4096, nperseg=4096, noverlap=1024)
             if self.setting == 'psdl1':
                 psd = preprocessing.normalize(psd.reshape(1,-1), norm='l1')
             elif self.setting == 'psdl2':
                 psd = preprocessing.normalize(psd.reshape(1,-1), norm='l2')
-            sample['x'] = psd
+            sample['x'] = psd[:,:1000]
             return sample

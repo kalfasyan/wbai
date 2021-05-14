@@ -7,8 +7,9 @@ import numpy as np
 
 class Conv1dNetRAW(nn.Module):
 
-    def __init__(self, outputs=2):
+    def __init__(self, outputs=2, dropout_p=0.2):
         super(Conv1dNetRAW, self).__init__()
+        self.dropout_p = dropout_p
         self.outputs = outputs
         self.conv1 = nn.Conv1d(1, 16, 3)
         self.relu1 = nn.ReLU()
@@ -35,9 +36,24 @@ class Conv1dNetRAW(nn.Module):
         self.bn5 = nn.BatchNorm1d(256)
         self.pool5 = nn.MaxPool1d(2)    
 
-        self.dropout = nn.Dropout()
-        self.avgPool = nn.AdaptiveAvgPool2d((256,1))#nn.AvgPool1d(154)
-        self.fc1 = nn.Linear(256, self.outputs)
+        self.conv6 = nn.Conv1d(256, 512, 3)
+        self.relu6 = nn.ReLU()
+        self.bn6 = nn.BatchNorm1d(512)
+        self.pool6 = nn.MaxPool1d(2)   
+
+        self.conv7 = nn.Conv1d(512, 1024, 3)
+        self.relu7 = nn.ReLU()
+        self.bn7 = nn.BatchNorm1d(1024)
+        self.pool7 = nn.MaxPool1d(2)   
+
+        self.conv8 = nn.Conv1d(1024, 2048, 3)
+        self.relu8 = nn.ReLU()
+        self.bn8 = nn.BatchNorm1d(2048)
+        self.pool8 = nn.MaxPool1d(2)  
+
+        self.dropout = nn.Dropout(self.dropout_p)
+        self.avgPool = nn.AdaptiveAvgPool2d((2048,1))#nn.AvgPool1d(154)
+        self.fc1 = nn.Linear(2048, self.outputs)
 
     def forward(self, x):
         # print("######")
@@ -83,6 +99,21 @@ class Conv1dNetRAW(nn.Module):
         x = self.pool5(x)
         # print(f"pool5: \t{x.shape}")
 
+        x = self.conv6(x)
+        x = F.relu(x)
+        x = self.bn6(x)
+        x = self.pool6(x)
+
+        x = self.conv7(x)
+        x = F.relu(x)
+        x = self.bn7(x)
+        x = self.pool7(x)
+
+        x = self.conv8(x)
+        x = F.relu(x)
+        x = self.bn8(x)
+        x = self.pool8(x)
+
         x = self.dropout(x)
         # print(f"dropout: \t{x.shape}")
         x = self.avgPool(x)
@@ -93,8 +124,9 @@ class Conv1dNetRAW(nn.Module):
         return x
 
 class Conv1dNetPSD(nn.Module):
-    def __init__(self):
+    def __init__(self, outputs=2):
         super(Conv1dNetPSD, self).__init__()
+        self.outputs = outputs
         self.conv1 = nn.Conv1d(1, 16, 3)
         self.bn1 = nn.BatchNorm1d(16)
         self.pool1 = nn.MaxPool1d(2)
@@ -113,7 +145,7 @@ class Conv1dNetPSD(nn.Module):
 
         self.dropout = nn.Dropout()
         self.avgPool = nn.AvgPool1d(127)
-        self.fc1 = nn.Linear(256, 2)
+        self.fc1 = nn.Linear(256, self.outputs)
 
     def forward(self, x):
         # print("######")
