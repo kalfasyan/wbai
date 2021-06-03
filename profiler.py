@@ -5,7 +5,7 @@ from tqdm import tqdm
 from transforms import Bandpass, NormalizedPSD, NormalizedPSDSums, TransformWingbeat
 import pandas as pd
 from datasets import WingbeatsDataset
-from utils import open_wingbeat, get_wbt_duration
+from utils import open_wingbeat, get_wbt_duration, show_peaks
 import time
 from scipy.signal import find_peaks
 import matplotlib.pyplot as plt
@@ -15,7 +15,7 @@ mpl.rcParams['axes.spines.right'] = False
 mpl.rcParams['axes.spines.top'] = False
 class WingbeatDatasetProfiler(object):
 
-    def __init__(self, dsname, bandpass_high=1500., rollwindow=150, noisethresh=0.003, rpiformat=False, custom_label=[0]):
+    def __init__(self, dsname, bandpass_high=2500., rollwindow=150, noisethresh=0.003, rpiformat=False, custom_label=[0]):
         self.dsname = dsname
         self.bandpass_high =bandpass_high
         self.rollwindow = rollwindow
@@ -47,7 +47,7 @@ class WingbeatDatasetProfiler(object):
                             custom_label=self.custom_label, 
                             clean=False, 
                             transform=transforms.Compose([Bandpass(highcut=self.bandpass_high), 
-                                                            NormalizedPSD(norm='l2', scaling='density', window='hanning', nfft=4096, nperseg=2048, noverlap=1024)]))
+                                                            NormalizedPSD(norm='l2', scaling='density', window='hanning', nfft=8192, nperseg=5000, noverlap=2500)]))
 
         dloader = DataLoader(d, batch_size=batch_size, shuffle=False, num_workers=4, pin_memory=True)
 
@@ -133,21 +133,23 @@ class WingbeatDatasetProfiler(object):
 
         for i in tqdm(range(20)):
             plt.subplot(4,5,i+1)
-            sig = self.psds[df.iloc[i].name][0].squeeze()[:2000]
+            sig = self.psds[df.iloc[i].name][0].squeeze()
 
-            plt.plot(sig.T);
+            # plt.plot(sig.T);
             score = df.loc[df.iloc[i].name].score
             duration = df.loc[df.iloc[i].name].duration
             filename = df.loc[df.iloc[i].name].x.split('/')[-1]
             peaks = df.loc[df.iloc[i].name].peaks
-            
+
+            show_peaks(sig);
+
             if title == 'filename':
                 plt.title(filename)
             else:
                 plt.title(f"score:{score:.0f}, duration:{duration:.0f}, peaks:{peaks}", y=0.9)
             if noaxis:
                 plt.axis('off')
-            plt.ylim(0,.18)
+            plt.ylim(0,.5)
     
     def plot_random_stfts(self, df=pd.DataFrame(), noaxis=True):
         if not len(df):

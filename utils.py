@@ -279,3 +279,10 @@ def load_checkpoint(filename, model, optimizer):
 def copy_files(filelist, destination):
     for f in tqdm(filelist, total=len(filelist), desc="Copying files.."):
         copy2(f, destination)
+
+def show_peaks(sig, height=0.04, prominence=0.001, width=1, distance=5):
+    from scipy.signal import find_peaks
+    
+    plt.plot(sig)
+    p, _ = find_peaks(sig.squeeze(), height=height, prominence=prominence, width=width, distance=distance)
+    plt.plot(p, sig[p], 'x')

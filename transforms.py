@@ -108,7 +108,7 @@ class NormalizeWingbeat(object):
 
 class NormalizedPSD(object):
 
-    def __init__(self, norm='l2', scaling='density', window='hanning', nfft=8192, nperseg=256, noverlap=128+64):
+    def __init__(self, norm='l2', scaling='density', window='hanning', nfft=8192, nperseg=5000, noverlap=2500):
         self.norm = norm
         self.scaling = scaling
         self.window = window
@@ -132,7 +132,7 @@ class NormalizedPSD(object):
 
 class NormalizedPSDSums(object):
 
-    def __init__(self, norm='l2', scaling='density', window='hanning', nfft=8192, nperseg=256, noverlap=128+64):
+    def __init__(self, norm='l2', scaling='density', window='hanning', nfft=8192, nperseg=5000, noverlap=2500):
         self.norm = norm
         self.scaling = scaling
         self.window = window
@@ -222,10 +222,11 @@ class TransformWingbeat(object):
             return sample
 
         elif self.setting.startswith('psd'):
-            _, psd = sg.welch(wbt.numpy().squeeze(), fs=rate, scaling='density', window='hanning', nfft=4096, nperseg=4096, noverlap=1024)
+            sig = wbt.numpy().squeeze()
+            _, psd = sg.welch(sig, fs=rate, scaling='density', window='hanning', nfft=8192, nperseg=len(sig), noverlap=len(sig)//2)
             if self.setting == 'psdl1':
                 psd = preprocessing.normalize(psd.reshape(1,-1), norm='l1')
             elif self.setting == 'psdl2':
                 psd = preprocessing.normalize(psd.reshape(1,-1), norm='l2')
-            sample['x'] = psd[:,:1000]
+            sample['x'] = psd[:,:2500]
             return sample
