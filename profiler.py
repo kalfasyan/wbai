@@ -15,13 +15,18 @@ mpl.rcParams['axes.spines.right'] = False
 mpl.rcParams['axes.spines.top'] = False
 class WingbeatDatasetProfiler(object):
 
-    def __init__(self, dsname, bandpass_high=2500., rollwindow=150, noisethresh=0.003, rpiformat=False, custom_label=[0]):
+    def __init__(self, dsname, bandpass_high=2500., rollwindow=150, noisethresh=0.003, rpiformat=False, custom_label=[0],
+                        height=0.04, prominence=0.001, width=1, distance=5):
         self.dsname = dsname
         self.bandpass_high =bandpass_high
         self.rollwindow = rollwindow
         self.noisethresh = noisethresh
         self.rpiformat = rpiformat
         self.custom_label = custom_label
+        self.height = height
+        self.prominence = prominence
+        self.width = width
+        self.distance = distance
         self.wbts = WingbeatsDataset(dsname=self.dsname, 
                                                 verbose=False,
                                                 custom_label=self.custom_label, 
@@ -39,9 +44,9 @@ class WingbeatDatasetProfiler(object):
                                                 clean=False, 
                                                 transform=transforms.Compose([Bandpass(highcut=self.bandpass_high), 
                                                                             TransformWingbeat(setting='stft')]))
-        self.get_dataset_df();
+        self.get_dataset_df(height=self.height, prominence=self.prominence, width=self.width, distance=self.distance);
 
-    def get_dataset_df(self, batch_size=16):
+    def get_dataset_df(self, batch_size=16, height=0.04, prominence=0.001, width=1, distance=5):
 
         d = WingbeatsDataset(dsname=self.dsname, 
                             custom_label=self.custom_label, 
@@ -51,7 +56,7 @@ class WingbeatDatasetProfiler(object):
 
         dloader = DataLoader(d, batch_size=batch_size, shuffle=False, num_workers=4, pin_memory=True)
 
-        sums,paths,labels,idx,peaks = [],[],[],[],[]
+        sums,paths,labels,idx,peaks,peaksxtra = [],[],[],[],[], []
         time.sleep(.5)
         for x,l,p,i,_ in tqdm(dloader, total=len(d)//batch_size, desc='Collecting all data from the dataloader..'):
             paths.extend(p)
@@ -59,12 +64,13 @@ class WingbeatDatasetProfiler(object):
             labels.extend(l.numpy())
             for sig in x:
                 sums.extend([sig.squeeze().sum()])
-                p, _ = find_peaks(sig.squeeze(), height=0.04, prominence=0.001, width=1, distance=5)
+                p, _ = find_peaks(sig.squeeze(), height=height, prominence=prominence, width=width, distance=distance)
                 peaks.extend([len(p)])
+                peaksxtra.extend([p])
 
 
         print("Creating a pandas Dataframe with file-paths, clean-scores, duration, sums of abs values, indice and labels..")        
-        df = pd.DataFrame({"x": paths, "y": labels, "idx": idx, "score": torch.tensor(sums), "peaks": peaks})
+        df = pd.DataFrame({"x": paths, "y": labels, "idx": idx, "score": torch.tensor(sums), "peaks": peaks, "peaksxtra": peaksxtra})
         df['duration'] = df.x.apply(lambda x: get_wbt_duration(x, window=self.rollwindow, th=self.noisethresh))
         df['sum'] = df.x.apply(lambda x: open_wingbeat(x).abs().sum().numpy())
         df['max'] = df.x.apply(lambda x: open_wingbeat(x).abs().max().numpy())

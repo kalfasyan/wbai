@@ -184,7 +184,7 @@ class TransformWingbeat(object):
         wbt, label, rate = sample['x'], sample['y'], sample['rate']
         
         if self.setting.startswith('stft'):
-            spec = Spectrogram(n_fft=1000, win_length=20, window_fn=torch.hann_window, power=2, normalized=True)(wbt)
+            spec = Spectrogram(n_fft=512, hop_length=20, win_length=300, window_fn=torch.hann_window, power=2, normalized=True)(wbt) # , win_length=20
             if self.setting == 'stftcrop': spec = spec[:,5:70,:]
             spec = AmplitudeToDB()(spec)
             spec = torch.from_numpy(np.repeat(spec.numpy()[...,np.newaxis],3,0))
@@ -228,5 +228,5 @@ class TransformWingbeat(object):
                 psd = preprocessing.normalize(psd.reshape(1,-1), norm='l1')
             elif self.setting == 'psdl2':
                 psd = preprocessing.normalize(psd.reshape(1,-1), norm='l2')
-            sample['x'] = psd[:,:2500]
+            sample['x'] = psd[:,:1500]
             return sample

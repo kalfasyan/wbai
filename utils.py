@@ -82,21 +82,21 @@ def calc_mean_std_1D(loader=None):
     return mean, std
 
 
-@torch.no_grad()
-def get_all_preds(model, loader):
-    all_preds = torch.tensor([])
-    for x_batch,y_batch,path_batch,idx_batch in loader:
+# @torch.no_grad()
+# def get_all_preds(model, loader):
+#     all_preds = torch.tensor([])
+#     for x_batch,y_batch,path_batch,idx_batch in loader:
 
-        y_batch = torch.as_tensor(y_batch).type(torch.LongTensor)
-        x_batch,y_batch = x_batch.cuda(), y_batch.cuda()
+#         y_batch = torch.as_tensor(y_batch).type(torch.LongTensor)
+#         x_batch,y_batch = x_batch.cuda(), y_batch.cuda()
 
 
-        preds = model(x_batch.float())
-        all_preds = torch.cat(
-            (all_preds, preds)
-            ,dim=0
-        )
-    return all_preds
+#         preds = model(x_batch.float())
+#         all_preds = torch.cat(
+#             (all_preds, preds)
+#             ,dim=0
+#         )
+#     return all_preds
 
 def np_hist(df, col, res=0.1, rot=45, fs=12):
     import matplotlib.pyplot as plt
@@ -243,7 +243,7 @@ def get_all_preds(model, loader, dataframe=False, binary=False):
         if binary:
             df_out = pd.DataFrame(out[0], columns=['pred'])
         else:
-            df_out = pd.DataFrame(out[0], columns=['pred0','pred1'])
+            df_out = pd.DataFrame(out[0], columns=[f'pred{i}' for i in range(len(out[0]))])
         df_out['y'] = out[1].cpu()
         df_out['fnames'] = out[2]
         df_out['idx'] = out[3].cpu()
