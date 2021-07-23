@@ -15,7 +15,7 @@ mpl.rcParams['axes.spines.right'] = False
 mpl.rcParams['axes.spines.top'] = False
 class WingbeatDatasetProfiler(object):
 
-    def __init__(self, dsname, bandpass_high=2500., rollwindow=150, noisethresh=0.003, rpiformat=False, custom_label=[0],
+    def __init__(self, dsname, bandpass_low=140., bandpass_high=1500., rollwindow=150, noisethresh=0.003, rpiformat=False, custom_label=[0],
                         height=0.04, prominence=0.001, width=1, distance=5):
         self.dsname = dsname
         self.bandpass_high =bandpass_high
@@ -31,18 +31,18 @@ class WingbeatDatasetProfiler(object):
                                                 verbose=False,
                                                 custom_label=self.custom_label, 
                                                 clean=False, 
-                                                transform=transforms.Compose([Bandpass(highcut=self.bandpass_high)]))
+                                                transform=transforms.Compose([Bandpass(lowcut=bandpass_low, highcut=self.bandpass_high)]))
         self.psds = WingbeatsDataset(dsname=self.dsname, 
                                                 verbose=False,
                                                 custom_label=self.custom_label, 
                                                 clean=False, 
-                                                transform=transforms.Compose([Bandpass(highcut=self.bandpass_high), 
+                                                transform=transforms.Compose([Bandpass(lowcut=bandpass_low, highcut=self.bandpass_high), 
                                                                             TransformWingbeat(setting='psdl2')]))
         self.stfts = WingbeatsDataset(dsname=self.dsname, 
                                                 verbose=False,
                                                 custom_label=self.custom_label, 
                                                 clean=False, 
-                                                transform=transforms.Compose([Bandpass(highcut=self.bandpass_high), 
+                                                transform=transforms.Compose([Bandpass(lowcut=bandpass_low, highcut=self.bandpass_high), 
                                                                             TransformWingbeat(setting='stft')]))
         self.get_dataset_df(height=self.height, prominence=self.prominence, width=self.width, distance=self.distance);
 

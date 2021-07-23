@@ -1,7 +1,7 @@
 import torch
 from librosa.core.spectrum import amplitude_to_db
 from scipy.signal.spectral import spectrogram
-from utils import get_wingbeat_files, label_func
+from utils import get_wingbeat_files, label_func, resize2d
 from fastai.data.transforms import get_files
 import librosa
 from sklearn import preprocessing
@@ -184,11 +184,13 @@ class TransformWingbeat(object):
         wbt, label, rate = sample['x'], sample['y'], sample['rate']
         
         if self.setting.startswith('stft'):
-            spec = Spectrogram(n_fft=512, hop_length=20, win_length=300, window_fn=torch.hann_window, power=2, normalized=True)(wbt) # , win_length=20
-            if self.setting == 'stftcrop': spec = spec[:,5:70,:]
+            spec = Spectrogram(n_fft=8192, hop_length=5, win_length=600, window_fn=torch.hann_window, power=2, normalized=True)(wbt) # , win_length=20
+            if self.setting == 'stftcrop': 
+                spec = spec[:,140:1500,:]
             spec = AmplitudeToDB()(spec)
             spec = torch.from_numpy(np.repeat(spec.numpy()[...,np.newaxis],3,0))
             spec = spec[:,:,:,0]
+            spec = resize2d(spec, (224,224))
         
             if self.setting == 'stftraw':
                 sample['x'] = (wbt,spec)

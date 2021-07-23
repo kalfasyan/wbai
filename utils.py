@@ -1,18 +1,23 @@
 from unicodedata import normalize
-import torchaudio
+
 import torch
+import torchaudio
+
 torch.manual_seed(42)
-from pathlib import Path
-import matplotlib.pyplot as plt
-from fastai.data.transforms import get_files
-import torch.nn.functional as F
-import pandas as pd
-import numpy as np
-from configparser import ConfigParser
-import sys
 import shutil
+import sys
+from configparser import ConfigParser
+from pathlib import Path
 from shutil import copy2
+
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+import torch.nn.functional as F
+from fastai.data.transforms import get_files
+from torch.autograd import Variable
 from tqdm import tqdm
+
 sys.setrecursionlimit(10000)
 
 cfg = ConfigParser()
@@ -178,8 +183,8 @@ def get_datestr_range(start='',end=''):
     return datestrlist
 
 def test_model(model, loader, dataset):
-    from tqdm import tqdm
     from sklearn.metrics import balanced_accuracy_score, confusion_matrix
+    from tqdm import tqdm
 
     model.eval()
     correct = 0
@@ -198,8 +203,8 @@ def test_model(model, loader, dataset):
     print(f"Confusion matrix: \n{confusion_matrix(y_pred=y_pred, y_true=y_true, normalize='true')}")
 
 def test_model_binary(model, loader, dataset):
-    from tqdm import tqdm
     from sklearn.metrics import balanced_accuracy_score, confusion_matrix
+    from tqdm import tqdm
 
     model.eval()
     correct = 0
@@ -222,7 +227,7 @@ def worker_init_fn(worker_id):
     np.random.seed(np.random.get_state()[1][0] + worker_id)
 
 @torch.no_grad()
-def get_all_preds(model, loader, dataframe=False, binary=False):
+def get_all_preds(model, loader, dataframe=False, final_nodes=2):
     all_preds = torch.tensor([]).cuda()
     all_labels = torch.tensor([]).cuda()
     all_paths = []
@@ -240,10 +245,10 @@ def get_all_preds(model, loader, dataframe=False, binary=False):
     if not dataframe:
         return out
     else:
-        if binary:
+        if final_nodes==1:
             df_out = pd.DataFrame(out[0], columns=['pred'])
         else:
-            df_out = pd.DataFrame(out[0], columns=[f'pred{i}' for i in range(len(out[0]))])
+            df_out = pd.DataFrame(out[0], columns=[f'pred{i}' for i in range(final_nodes)])
         df_out['y'] = out[1].cpu()
         df_out['fnames'] = out[2]
         df_out['idx'] = out[3].cpu()
@@ -286,3 +291,6 @@ def show_peaks(sig, height=0.04, prominence=0.001, width=1, distance=5):
     plt.plot(sig)
     p, _ = find_peaks(sig.squeeze(), height=height, prominence=prominence, width=width, distance=distance)
     plt.plot(p, sig[p], 'x')
+
+def resize2d(img, size):
+    return (F.adaptive_avg_pool2d(Variable(img,volatile=True), size)).data
