@@ -43,7 +43,7 @@ train_dataset, valid_dataset = torch.utils.data.random_split(transformed_dataset
 train_dataloader = DataLoader(train_dataset, batch_size=batch_size, num_workers=num_workers)
 valid_dataloader = DataLoader(valid_dataset, batch_size=batch_size_val, num_workers=num_workers)
 
-model = Conv1dNetRAW()
+model = DrosophilaNetRAW()
 criterion = nn.BCEWithLogitsLoss()
 optimizer = torch.optim.Adam(model.parameters(), lr=0.01, betas=(0.9, 0.999))
 

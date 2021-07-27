@@ -5,10 +5,10 @@ import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
 
-class Conv1dNetRAW(nn.Module):
+class DrosophilaNetRAW(nn.Module):
 
     def __init__(self, outputs=2, dropout_p=0.2):
-        super(Conv1dNetRAW, self).__init__()
+        super(DrosophilaNetRAW, self).__init__()
         self.dropout_p = dropout_p
         self.outputs = outputs
         self.conv1 = nn.Conv1d(1, 16, 3)
@@ -123,9 +123,9 @@ class Conv1dNetRAW(nn.Module):
         # print(f"fc1: \t{x.shape}")
         return x
 
-class Conv1dNetPSD(nn.Module):
+class DrosophilaNetPSD(nn.Module):
     def __init__(self, outputs=2):
-        super(Conv1dNetPSD, self).__init__()
+        super(DrosophilaNetPSD, self).__init__()
         self.outputs = outputs
         self.conv1 = nn.Conv1d(1, 16, 3)
         self.bn1 = nn.BatchNorm1d(16)
