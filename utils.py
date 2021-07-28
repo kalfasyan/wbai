@@ -293,4 +293,5 @@ def show_peaks(sig, height=0.04, prominence=0.001, width=1, distance=5):
     plt.plot(p, sig[p], 'x')
 
 def resize2d(img, size):
-    return (F.adaptive_avg_pool2d(Variable(img,volatile=True), size)).data
+    with torch.no_grad():
+        return (F.adaptive_avg_pool2d(Variable(img), size)).data

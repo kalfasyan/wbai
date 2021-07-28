@@ -43,7 +43,7 @@ class WingbeatDatasetProfiler(object):
                                                 custom_label=self.custom_label, 
                                                 clean=False, 
                                                 transform=transforms.Compose([Bandpass(lowcut=bandpass_low, highcut=self.bandpass_high), 
-                                                                            TransformWingbeat(setting='stft')]))
+                                                                            TransformWingbeat(setting='stftcropresize')]))
         self.get_dataset_df(height=self.height, prominence=self.prominence, width=self.width, distance=self.distance);
 
     def get_dataset_df(self, batch_size=16, height=0.04, prominence=0.001, width=1, distance=5):

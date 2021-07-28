@@ -185,12 +185,13 @@ class TransformWingbeat(object):
         
         if self.setting.startswith('stft'):
             spec = Spectrogram(n_fft=8192, hop_length=5, win_length=600, window_fn=torch.hann_window, power=2, normalized=True)(wbt) # , win_length=20
-            if self.setting == 'stftcrop': 
+            if self.setting.startswith('stftcrop'): 
                 spec = spec[:,140:1500,:]
             spec = AmplitudeToDB()(spec)
             spec = torch.from_numpy(np.repeat(spec.numpy()[...,np.newaxis],3,0))
             spec = spec[:,:,:,0]
-            spec = resize2d(spec, (224,224))
+            if self.setting == 'stftcropresize':
+                spec = resize2d(spec, (400,295))
         
             if self.setting == 'stftraw':
                 sample['x'] = (wbt,spec)
