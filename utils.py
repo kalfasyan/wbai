@@ -291,6 +291,7 @@ def show_peaks(sig, height=0.04, prominence=0.001, width=1, distance=5):
     plt.plot(sig)
     p, _ = find_peaks(sig.squeeze(), height=height, prominence=prominence, width=width, distance=distance)
     plt.plot(p, sig[p], 'x')
+    plt.title(len(p))
 
 def resize2d(img, size):
     with torch.no_grad():
