@@ -31,8 +31,13 @@ def get_wingbeat_files(dsname):
     datadir = Path(BASE_DATAPATH/dsname)
     return get_files(datadir, extensions='.wav', recurse=True, folders=None, followlinks=True)
 
-def open_wingbeat(fname, plot=False, verbose=False, rate=False):
+def open_wingbeat(fname, plot=False, verbose=False, rate=False, rpiformat=False):
     waveform, sample_rate = torchaudio.load(str(fname))
+
+    if rpiformat:
+        waveform = waveform[0,4001:34001]
+        resample = torchaudio.transforms.Resample(orig_freq=48000, new_freq=8000)
+        waveform = resample(waveform)
 
     if verbose:
         print(f"Shape of waveform: {waveform.size()}")
@@ -201,6 +206,7 @@ def test_model(model, loader, dataset):
     print(f"Accuracy: {accuracy:.2f}")
     print(f"Balanced accuracy: {balanced_accuracy_score(y_pred=y_pred, y_true=y_true)*100.:.2f}")
     print(f"Confusion matrix: \n{confusion_matrix(y_pred=y_pred, y_true=y_true, normalize='true')}")
+    return y_true, y_pred, x_batch
 
 def test_model_binary(model, loader, dataset):
     from sklearn.metrics import balanced_accuracy_score, confusion_matrix

@@ -31,19 +31,22 @@ class WingbeatDatasetProfiler(object):
                                                 verbose=False,
                                                 custom_label=self.custom_label, 
                                                 clean=False, 
-                                                transform=transforms.Compose([Bandpass(lowcut=bandpass_low, highcut=self.bandpass_high)]))
+                                                transform=transforms.Compose([Bandpass(lowcut=bandpass_low, highcut=self.bandpass_high)]),
+                                                rpiformat=self.rpiformat)
         self.psds = WingbeatsDataset(dsname=self.dsname, 
                                                 verbose=False,
                                                 custom_label=self.custom_label, 
                                                 clean=False, 
                                                 transform=transforms.Compose([Bandpass(lowcut=bandpass_low, highcut=self.bandpass_high), 
-                                                                            TransformWingbeat(setting='psdl2')]))
+                                                                            TransformWingbeat(setting='psdl2')]),
+                                                rpiformat=self.rpiformat)
         self.stfts = WingbeatsDataset(dsname=self.dsname, 
                                                 verbose=False,
                                                 custom_label=self.custom_label, 
                                                 clean=False, 
                                                 transform=transforms.Compose([Bandpass(lowcut=bandpass_low, highcut=self.bandpass_high), 
-                                                                            TransformWingbeat(setting='stftcropresize')]))
+                                                                            TransformWingbeat(setting='stftcropresize')]),
+                                                rpiformat=self.rpiformat)
         self.get_dataset_df(height=self.height, prominence=self.prominence, width=self.width, distance=self.distance);
 
     def get_dataset_df(self, batch_size=16, height=0.04, prominence=0.001, width=1, distance=5):

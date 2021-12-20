@@ -60,7 +60,7 @@ class DataFrameset(Dataset):
 class WingbeatsDataset(Dataset):
     """Wingbeats dataset."""
 
-    def __init__(self, dsname, custom_label=[], clean=True, sample=0, transform=None, verbose=True):
+    def __init__(self, dsname, custom_label=[], clean=True, sample=0, transform=None, verbose=True, rpiformat=False):
         """
         Args:
             dsname (string): Dataset Name.
@@ -72,6 +72,7 @@ class WingbeatsDataset(Dataset):
         self.transform = transform
         self.clean = clean
         self.sample = sample
+        self.rpiformat = rpiformat
 
         if self.clean:
             self.files, self.labels, self.lbl2files, self.paths, self.sums = make_dataset_df(dsname, sample=self.sample, clean=self.clean, verbose=self.verbose)
@@ -95,7 +96,7 @@ class WingbeatsDataset(Dataset):
 
         fname = self.files[idx]
         label = self.labels[idx]
-        wbt,rate = open_wingbeat(fname, plot=False, rate=True)
+        wbt,rate = open_wingbeat(fname, plot=False, rate=True, rpiformat=self.rpiformat)
         sample = {'x': wbt, 'y': label, 'path': str(fname), 'idx': idx, 'rate': rate}
 
         if self.transform:
@@ -298,3 +299,15 @@ def normalized_psd_sum(sig):
     _,p = sg.welch(sig, fs=SR, scaling='density', window='hanning', nfft=8192, nperseg=256, noverlap=128+64)
     p = preprocessing.normalize(p.reshape(1,-1), norm='l2').T.squeeze()
     return p.sum()
+
+def evaluate_data(df, model, tansforms_list=[]):
+    from utils import test_model, worker_init_fn
+    if not len(tansforms_list):
+        from transforms import Bandpass
+        tansforms_list = [Bandpass(lowcut=140, highcut=1500)]
+    X_test, y_test = df.iloc[:,0], df.iloc[:,1]
+    test_dataset = DataFrameset(pd.concat([X_test, y_test], axis=1), transform=transforms.Compose(tansforms_list))
+    test_dataloader = DataLoader(test_dataset, batch_size=32, shuffle=False)
+    y_true, y_pred, x_batch = test_model(model,test_dataloader, test_dataset)
+
+    print(pd.Series(y_pred).value_counts())
