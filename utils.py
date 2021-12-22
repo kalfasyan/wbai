@@ -275,10 +275,11 @@ def plot_wingbeat_spectrogram(dataset, idx=None):
     sig = dataset[idx][0]
     plt.imshow(sig[0])
 
-def save_checkpoint(state, is_best, filename=f'{BASE_DATACREATEDDIR}/checkpoint.pth.tar'):
+def save_checkpoint(state, is_best, filename=''):
+    filename = f'{BASE_DATACREATEDDIR}/{filename}.pth.tar'
     torch.save(state, filename)
     if is_best:
-        shutil.copyfile(filename, f'{BASE_DATACREATEDDIR}/model_best.pth.tar')
+        shutil.copyfile(filename, f"{filename.split('.')[0]}_best.pth.tar")
 
 def load_checkpoint(filename, model, optimizer):
     assert isinstance(filename, str) and filename.endswith('pth.tar'), "Only works with a pth.tar file."
