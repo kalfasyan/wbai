@@ -36,7 +36,7 @@ def open_wingbeat(fname, plot=False, verbose=False, rate=False, rpiformat=False)
 
     if rpiformat:
         waveform = waveform[0,4001:34001]
-        resample = torchaudio.transforms.Resample(orig_freq=48000, new_freq=8000)
+        resample = torchaudio.transforms.Resample(orig_freq=rate, new_freq=8000)
         waveform = resample(waveform)
 
     if verbose:

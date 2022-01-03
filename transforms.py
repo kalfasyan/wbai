@@ -66,7 +66,7 @@ class RandomNoise(object):
 class Bandpass(object):
     "Class to apply a signal processing filter to a dataset"
 
-    def __init__(self, lowcut=120., highcut=1500., order=4):
+    def __init__(self, lowcut=140., highcut=1500., order=4):
         self.lowcut = lowcut
         self.highcut = highcut
         self.order = order
@@ -226,10 +226,13 @@ class TransformWingbeat(object):
 
         elif self.setting.startswith('psd'):
             sig = wbt.numpy().squeeze()
-            _, psd = sg.welch(sig, fs=rate, scaling='density', window='hanning', nfft=8192, nperseg=len(sig), noverlap=len(sig)//2)
+
+            nfft = 8192 if len(sig)<=5000 else 65536
+
+            _, psd = sg.welch(sig, fs=rate, scaling='density', window='hanning', nfft=nfft, nperseg=len(sig), noverlap=len(sig)//2)
             if self.setting == 'psdl1':
                 psd = preprocessing.normalize(psd.reshape(1,-1), norm='l1')
             elif self.setting == 'psdl2':
                 psd = preprocessing.normalize(psd.reshape(1,-1), norm='l2')
-            sample['x'] = psd[:,:1500]
+            sample['x'] = psd[:,140:1500]
             return sample
