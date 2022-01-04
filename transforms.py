@@ -183,8 +183,10 @@ class TransformWingbeat(object):
     def __call__(self, sample):
         wbt, label, rate = sample['x'], sample['y'], sample['rate']
         
+        nfft = 8192 if len(wbt.numpy().squeeze())<=5000 else 65536
+
         if self.setting.startswith('stft'):
-            spec = Spectrogram(n_fft=8192, hop_length=5, win_length=600, window_fn=torch.hann_window, power=2, normalized=True)(wbt) # , win_length=20
+            spec = Spectrogram(n_fft=nfft, hop_length=5, win_length=600, window_fn=torch.hann_window, power=2, normalized=True)(wbt) # , win_length=20
             if self.setting.startswith('stftcrop'): 
                 spec = spec[:,140:1500,:]
             spec = AmplitudeToDB()(spec)
@@ -202,7 +204,7 @@ class TransformWingbeat(object):
 
         elif self.setting.startswith('melstft'):
             # TODO: Something wrong in the output spec. Missing frequencies.
-            spec = MelSpectrogram(sample_rate=rate, n_fft=8192, hop_length=25, f_max=3500, win_length=50, window_fn=torch.hann_window, power=2, normalized=True)(wbt)
+            spec = MelSpectrogram(sample_rate=rate, n_fft=nfft, hop_length=25, f_max=3500, win_length=50, window_fn=torch.hann_window, power=2, normalized=True)(wbt)
             spec = AmplitudeToDB()(spec)
             spec = torch.from_numpy(np.repeat(spec.numpy()[...,np.newaxis],3,0))
             spec = spec[:,:,:,0]
@@ -226,9 +228,6 @@ class TransformWingbeat(object):
 
         elif self.setting.startswith('psd'):
             sig = wbt.numpy().squeeze()
-
-            nfft = 8192 if len(sig)<=5000 else 65536
-
             _, psd = sg.welch(sig, fs=rate, scaling='density', window='hanning', nfft=nfft, nperseg=len(sig), noverlap=len(sig)//2)
             if self.setting == 'psdl1':
                 psd = preprocessing.normalize(psd.reshape(1,-1), norm='l1')
