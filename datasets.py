@@ -300,14 +300,14 @@ def normalized_psd_sum(sig):
     p = preprocessing.normalize(p.reshape(1,-1), norm='l2').T.squeeze()
     return p.sum()
 
-def evaluate_data(df, model, transforms_list=[]):
+def evaluate_data(df, model, batch_size=32, transforms_list=[]):
     from utils import test_model, worker_init_fn
     if not len(transforms_list):
         from transforms import Bandpass
         transforms_list = [Bandpass(lowcut=140, highcut=1500)]
     X_test, y_test = df.iloc[:,0], df.iloc[:,1]
     test_dataset = DataFrameset(pd.concat([X_test, y_test], axis=1), transform=transforms.Compose(transforms_list))
-    test_dataloader = DataLoader(test_dataset, batch_size=32, shuffle=False)
+    test_dataloader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
     y_true, y_pred, x_batch = test_model(model,test_dataloader, test_dataset)
 
     print(pd.Series(y_pred).value_counts())

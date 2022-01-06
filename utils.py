@@ -32,12 +32,17 @@ def get_wingbeat_files(dsname):
     return get_files(datadir, extensions='.wav', recurse=True, folders=None, followlinks=True)
 
 def open_wingbeat(fname, plot=False, verbose=False, rate=False, rpiformat=False):
+    from scipy import signal
     waveform, sample_rate = torchaudio.load(str(fname))
 
     if rpiformat:
-        waveform = waveform[0,4001:34001]
-        resample = torchaudio.transforms.Resample(orig_freq=rate, new_freq=8000)
+        # print(sample_rate)
+        # assert waveform.shape[1] == 72000, print(f"{waveform.shape[1]}") 
+        assert sample_rate == 48000
+        waveform = waveform[0,:30000]
+        resample = torchaudio.transforms.Resample(orig_freq=sample_rate, new_freq=8000, lowpass_filter_width=1)
         waveform = resample(waveform)
+        # waveform = torch.from_numpy(signal.resample(waveform.T, 5000).squeeze())
 
     if verbose:
         print(f"Shape of waveform: {waveform.size()}")

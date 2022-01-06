@@ -27,6 +27,7 @@ class WingbeatDatasetProfiler(object):
         self.prominence = prominence
         self.width = width
         self.distance = distance
+        self.transforms = []
         self.wbts = WingbeatsDataset(dsname=self.dsname, 
                                                 verbose=False,
                                                 custom_label=self.custom_label, 
