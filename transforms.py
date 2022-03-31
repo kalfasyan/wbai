@@ -193,7 +193,7 @@ class TransformWingbeat(object):
             spec = torch.from_numpy(np.repeat(spec.numpy()[...,np.newaxis],3,0))
             spec = spec[:,:,:,0]
             if self.setting == 'stftcropresize':
-                spec = resize2d(spec, (400,295))
+                spec = resize2d(spec, (300,195)) # NOTE: This was 400,295 for paper
         
             if self.setting == 'stftraw':
                 sample['x'] = (wbt,spec)
