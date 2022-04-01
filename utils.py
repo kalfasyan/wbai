@@ -21,7 +21,7 @@ from tqdm import tqdm
 sys.setrecursionlimit(10000)
 
 cfg = ConfigParser()
-cfg.read('/home/kalfasyan/projects/wbai/config.ini')
+cfg.read('/mnt/HGST_4TB/Ubudirs/projects/wbai/config.ini')
 
 BASE_DATAPATH = Path(cfg.get('base','data_dir'))
 BASE_PROJECTPATH = Path(cfg.get('base','project_dir'))

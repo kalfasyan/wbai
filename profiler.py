@@ -75,15 +75,22 @@ class WingbeatDatasetProfiler(object):
 
         print("Creating a pandas Dataframe with file-paths, clean-scores, duration, sums of abs values, indice and labels..")        
         df = pd.DataFrame({"x": paths, "y": labels, "idx": idx, "score": torch.tensor(sums), "peaks": peaks, "peaksxtra": peaksxtra})
+        print("Duration")
         df['duration'] = df.x.apply(lambda x: get_wbt_duration(x, window=self.rollwindow, th=self.noisethresh))
+        print("Sum..")
         df['sum'] = df.x.apply(lambda x: open_wingbeat(x).abs().sum().numpy())
+        print("Max..")
         df['max'] = df.x.apply(lambda x: open_wingbeat(x).abs().max().numpy())
+        print("Filename..")
         df['fname'] = df.x.apply(lambda x: x.split('/')[-1][:-4])
+        print("Date..")
         if self.rpiformat:
             df['date'] = df.fname.apply(lambda x: pd.to_datetime(''.join(x.split('_')[0:2])))
         else:
             df['date'] = df.fname.apply(lambda x: pd.to_datetime(''.join(x.split('_')[0:2]), format=f'F%y%m%d%H%M%S'))
+        print("Date string..")
         df['datestr'] = df['date'].apply(lambda x: x.strftime("%Y%m%d"))
+        print("Datehour string..")
         df['datehourstr'] = df['date'].apply(lambda x: x.strftime("%y%m%d_%H"))
         self.df = df
         print('Finished.')
