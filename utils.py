@@ -308,3 +308,28 @@ def show_peaks(sig, height=0.04, prominence=0.001, width=1, distance=5):
 def resize2d(img, size):
     with torch.no_grad():
         return (F.adaptive_avg_pool2d(Variable(img), size)).data
+
+def scale(A):
+    return (A-np.min(A))/(np.max(A) - np.min(A))
+
+def get_bad_first_chunk_score(x, plot=False):
+    x = scale(x)
+
+    winsize = 5
+    part = x[620:712+winsize]
+    part = pd.Series(part).rolling(winsize).std().abs()
+    if plot:
+        part.plot()
+
+    partA = part.iloc[:46]
+    partB = part.iloc[46:]
+    
+    if plot:
+        partA.plot(color='b')
+        partB.plot(color='k')
+
+    scoreA = partA.sum()
+    scoreB = partB.sum()
+
+    score = scoreB - scoreA
+    return score

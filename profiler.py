@@ -5,7 +5,7 @@ from tqdm import tqdm
 from transforms import Bandpass, NormalizedPSD, NormalizedPSDSums, TransformWingbeat
 import pandas as pd
 from datasets import WingbeatsDataset
-from utils import open_wingbeat, get_wbt_duration, show_peaks
+from utils import open_wingbeat, get_wbt_duration, show_peaks, get_bad_first_chunk_score
 import time
 from scipy.signal import find_peaks
 import matplotlib.pyplot as plt
@@ -75,12 +75,14 @@ class WingbeatDatasetProfiler(object):
 
         print("Creating a pandas Dataframe with file-paths, clean-scores, duration, sums of abs values, indice and labels..")        
         df = pd.DataFrame({"x": paths, "y": labels, "idx": idx, "score": torch.tensor(sums), "peaks": peaks, "peaksxtra": peaksxtra})
-        print("Duration")
+        print("Duration..")
         df['duration'] = df.x.apply(lambda x: get_wbt_duration(x, window=self.rollwindow, th=self.noisethresh))
         print("Sum..")
         df['sum'] = df.x.apply(lambda x: open_wingbeat(x).abs().sum().numpy())
         print("Max..")
         df['max'] = df.x.apply(lambda x: open_wingbeat(x).abs().max().numpy())
+        print("Bad chunk score")
+        df['badchunkscore'] = df.x.apply(lambda x: get_bad_first_chunk_score(open_wingbeat(x).squeeze().numpy()))
         print("Filename..")
         df['fname'] = df.x.apply(lambda x: x.split('/')[-1][:-4])
         print("Date..")
