@@ -5,10 +5,10 @@ import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
 
-class DrosophilaNetRAW(nn.Module):
+class DrosophilaNetTIME(nn.Module):
 
     def __init__(self, outputs=2, dropout_p=0.2):
-        super(DrosophilaNetRAW, self).__init__()
+        super(DrosophilaNetTIME, self).__init__()
         self.dropout_p = dropout_p
         self.outputs = outputs
         self.conv1 = nn.Conv1d(1, 16, 3)
@@ -51,53 +51,37 @@ class DrosophilaNetRAW(nn.Module):
         self.bn8 = nn.BatchNorm1d(2048)
         self.pool8 = nn.MaxPool1d(2)  
 
-        self.dropout = nn.Dropout(self.dropout_p)
         self.avgPool = nn.AdaptiveAvgPool2d((2048,1))#nn.AvgPool1d(154)
+        self.dropout = nn.Dropout(self.dropout_p)
+        
         self.fc1 = nn.Linear(2048, self.outputs)
 
     def forward(self, x):
-        # print("######")
 
         x = self.conv1(x)
         x = F.relu(x)
-        # print(f"relu: \t{x.shape}")
         x = self.bn1(x)
-        # print(f"bnrm1: \t{x.shape}")
         x = self.pool1(x)
-        # print(f"pool1: \t{x.shape}")
 
         x = self.conv2(x)
         x = F.relu(x)
-        # print(f"relu2: \t{x.shape}")
         x = self.bn2(x)
-        # print(f"bnrm2: \t{x.shape}")
         x = self.pool2(x)
-        # print(f"pool2: \t{x.shape}")
-
 
         x = self.conv3(x)
         x = F.relu(x)
-        # print(f"relu3: \t{x.shape}")
         x = self.bn3(x)
-        # print(f"bnrm3: \t{x.shape}")
         x = self.pool3(x)
-        # print(f"pool3: \t{x.shape}")
 
         x = self.conv4(x)
         x = F.relu(x)
-        # print(f"relu4: \t{x.shape}")
         x = self.bn4(x)
-        # print(f"bnrm4: \t{x.shape}")
         x = self.pool4(x)
-        # print(f"pool4: \t{x.shape}")
 
         x = self.conv5(x)
         x = F.relu(x)
-        # print(f"relu: \t{x.shape}")
         x = self.bn5(x)
-        # print(f"bnrm5: \t{x.shape}")
         x = self.pool5(x)
-        # print(f"pool5: \t{x.shape}")
 
         x = self.conv6(x)
         x = F.relu(x)
@@ -114,16 +98,18 @@ class DrosophilaNetRAW(nn.Module):
         x = self.bn8(x)
         x = self.pool8(x)
 
-        x = self.dropout(x)
-        # print(f"dropout: \t{x.shape}")
         x = self.avgPool(x)
-        # print(f"avgPool: \t{x.shape}")
+        x = self.dropout(x)
         x = x.view(x.shape[0], -1)
         x = self.fc1(x)
-        # print(f"fc1: \t{x.shape}")
         return x
 
 class DrosophilaNetPSD(nn.Module):
+    """
+    This model has been used to experiment with PSD data.
+    For example, training a lower dimensional model.
+    """
+
     def __init__(self, outputs=2):
         super(DrosophilaNetPSD, self).__init__()
         self.outputs = outputs
@@ -143,8 +129,8 @@ class DrosophilaNetPSD(nn.Module):
         self.bn4 = nn.BatchNorm1d(128)
         self.pool4 = nn.MaxPool1d(2) 
 
-        self.dropout = nn.Dropout()
         self.avgPool = nn.AvgPool1d(127)
+        self.dropout = nn.Dropout()
         self.fc1 = nn.Linear(256, self.outputs)
 
     def forward(self, x):
@@ -185,8 +171,9 @@ class DrosophilaNetPSD(nn.Module):
         # x = self.pool5(x)
         # print(f"pool5: {x.shape}")
 
-        x = self.dropout(x)
+
         x = self.avgPool(x)
+        x = self.dropout(x)
         # print(f"avgPool: {x.shape}")
         # x = x.permute(0, 2, 1) #change the 512x1 to 1x512
         x = x.view(x.shape[0], -1)
@@ -312,6 +299,7 @@ def pass_through(X):
 	return X
 
 
+# Credit to : https://github.com/TheMrGhostman/InceptionTime-Pytorch
 class Inception(nn.Module):
 	def __init__(self, in_channels, n_filters, kernel_sizes=[9, 19, 39], bottleneck_channels=32, activation=nn.ReLU(), return_indices=False):
 		"""
@@ -396,7 +384,7 @@ class Inception(nn.Module):
 		else:
 			return Z
 
-
+# Credit to : https://github.com/TheMrGhostman/InceptionTime-Pytorch
 class InceptionBlock(nn.Module):
 	def __init__(self, in_channels, n_filters=32, kernel_sizes=[9,19,39], bottleneck_channels=32, use_residual=True, activation=nn.ReLU(), return_indices=False):
 		super(InceptionBlock, self).__init__()
@@ -459,7 +447,7 @@ class InceptionBlock(nn.Module):
 			return Z
 
 
-
+# Credit to : https://github.com/TheMrGhostman/InceptionTime-Pytorch
 class InceptionTranspose(nn.Module):
 	def __init__(self, in_channels, out_channels, kernel_sizes=[9, 19, 39], bottleneck_channels=32, activation=nn.ReLU()):
 		"""
@@ -530,7 +518,7 @@ class InceptionTranspose(nn.Module):
 			
 			return self.activation(self.batch_norm(BN + MUP))
 
-
+# Credit to : https://github.com/TheMrGhostman/InceptionTime-Pytorch
 class InceptionTransposeBlock(nn.Module):
 	def __init__(self, in_channels, out_channels=32, kernel_sizes=[9,19,39], bottleneck_channels=32, use_residual=True, activation=nn.ReLU()):
 		super(InceptionTransposeBlock, self).__init__()
@@ -582,38 +570,3 @@ class InceptionTransposeBlock(nn.Module):
 		return Z
 
 ######## - end - INCEPTIONTIME ##############
-
-#### BAYESIAN #####
-
-class ModuleWrapper(nn.Module):
-    """Wrapper for nn.Module with support for arbitrary flags and a universal forward pass"""
-
-    def __init__(self):
-        super(ModuleWrapper, self).__init__()
-
-    def set_flag(self, flag_name, value):
-        setattr(self, flag_name, value)
-        for m in self.children():
-            if hasattr(m, 'set_flag'):
-                m.set_flag(flag_name, value)
-
-    def forward(self, x):
-        for module in self.children():
-            x = module(x)
-
-        kl = 0.0
-        for module in self.modules():
-            if hasattr(module, 'kl_loss'):
-                kl = kl + module.kl_loss()
-
-        return x, kl
-
-
-class FlattenLayer(ModuleWrapper):
-
-    def __init__(self, num_features):
-        super(FlattenLayer, self).__init__()
-        self.num_features = num_features
-
-    def forward(self, x):
-        return x.view(-1, self.num_features)

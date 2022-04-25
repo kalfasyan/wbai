@@ -211,7 +211,6 @@ def test_model(model, loader, dataset):
     print(f"Accuracy: {accuracy:.2f}")
     print(f"Balanced accuracy: {balanced_accuracy_score(y_pred=y_pred, y_true=y_true)*100.:.2f}")
     print(f"Confusion matrix: \n{confusion_matrix(y_pred=y_pred, y_true=y_true, normalize='true')}")
-    return y_true, y_pred, x_batch
 
 def test_model_binary(model, loader, dataset):
     from sklearn.metrics import balanced_accuracy_score, confusion_matrix
@@ -258,12 +257,13 @@ def get_all_preds(model, loader, dataframe=False, final_nodes=2):
     else:
         if final_nodes==1:
             df_out = pd.DataFrame(out[0], columns=['pred'])
+            df_out['softmax'] = df_out.pred.apply(lambda x: 1 if x>0 else 0)
         else:
             df_out = pd.DataFrame(out[0], columns=[f'pred{i}' for i in range(final_nodes)])
+            df_out['softmax'] = torch.argmax(F.softmax(out[0], dim=1), dim=1).detach().cpu()
         df_out['y'] = out[1].cpu()
         df_out['fnames'] = out[2]
         df_out['idx'] = out[3].cpu()
-        df_out['softmax'] = torch.argmax(F.softmax(out[0], dim=1), dim=1).detach().cpu()
         return df_out
 
 def plot_wingbeat(dataset, idx=None):
