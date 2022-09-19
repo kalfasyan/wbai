@@ -125,8 +125,9 @@ def np_hist(df, col, res=0.1, rot=45, fs=12):
     plt.yticks(fontsize=fs);
     plt.show()
 
-def get_wbt_duration(fname, window=150, th=0.0025, plot=False):
+def get_wbt_duration(fname, lowcut=140., highcut=1500., order=4, window=150, th=0.0025, plot=False):
     sig, rate = open_wingbeat(fname, rate=True)
+    sig = butter_bandpass_filter(sig, lowcut=lowcut, highcut=highcut, fs=rate, order=order)
     sig = pd.Series(sig.squeeze()).abs().rolling(window).mean()
     if plot:
         import matplotlib.pyplot as plt
